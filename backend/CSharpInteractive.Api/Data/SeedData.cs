@@ -4106,6 +4106,9 @@ public static class SeedData
                 ]
             };
 
+            AttachIntermediateBosses(course);
+            AttachIntermediateBosses(sqlCourse);
+
             db.Courses.AddRange(course, sqlCourse);
             db.Badges.AddRange(
                 new Badge { Slug = "first-run", Name = "Premier run", Description = "Terminer une premiere lecon.", IconName = "play", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 },
@@ -4113,6 +4116,8 @@ public static class SeedData
                 new Badge { Slug = "boss-slayer", Name = "Boss Final", Description = "Reussir le mini-projet final.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinal, RuleValue = 1 },
                 new Badge { Slug = "sql-first-select", Name = "Premier SELECT", Description = "Terminer une premiere lecon SQL.", IconName = "database", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 });
         }
+
+        await EnsureIntermediateBossesSeededAsync(db);
 
         if (!await db.UserProfiles.AnyAsync())
         {
@@ -4124,6 +4129,184 @@ public static class SeedData
 
     private static Chapter Chapter(string title, string description, int sortOrder, int requiredXp, List<Lesson> lessons) =>
         new() { Title = title, Description = description, SortOrder = sortOrder, RequiredXp = requiredXp, Lessons = lessons };
+
+    private static async Task EnsureIntermediateBossesSeededAsync(AppDbContext db)
+    {
+        if (await db.IntermediateBosses.AnyAsync())
+        {
+            return;
+        }
+
+        var courses = await db.Courses
+            .Include(course => course.Chapters)
+            .ThenInclude(chapter => chapter.Lessons)
+            .ThenInclude(lesson => lesson.Tests)
+            .Include(course => course.Chapters)
+            .ThenInclude(chapter => chapter.IntermediateBoss)
+            .ToListAsync();
+
+        foreach (var course in courses)
+        {
+            AttachIntermediateBosses(course);
+        }
+    }
+
+    private static void AttachIntermediateBosses(Course course)
+    {
+        foreach (var chapter in course.Chapters.Where(chapter => !chapter.Title.Contains("Boss Final", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (chapter.IntermediateBoss is not null)
+            {
+                continue;
+            }
+
+            chapter.IntermediateBoss = course.Language == "sqlserver" && chapter.SortOrder == 1
+                ? SqlModuleOneIntermediateBoss()
+                : course.Language == "csharp" && chapter.SortOrder == 1
+                    ? CSharpModuleOneIntermediateBoss()
+                    : BuildIntermediateBossFromModule(course, chapter);
+        }
+    }
+
+    private static IntermediateBoss CSharpModuleOneIntermediateBoss() =>
+        new()
+        {
+            Slug = "csharp-module-1-intermediate-boss",
+            Title = "Monstre intermediaire - Fondations C#",
+            Objective = "Prouver que tu sais assembler affichage console, variables, types et operateurs.",
+            Instructions = "Cree une fiche de personnage pour Ada. Le programme doit utiliser Console.WriteLine, des variables typees, un calcul et une comparaison. Affiche exactement deux lignes: Ada - score 37 puis Pret: True.",
+            StarterCode =
+            """
+            using System;
+
+            string player = "Ada";
+            int baseScore = 30;
+            int bonus = 0;
+            bool isReady = false;
+
+            // Calcule finalScore, rends le joueur pret, puis affiche les deux lignes demandees.
+            """,
+            ExpectedResult = "Ada - score 37\nPret: True",
+            XpReward = 80,
+            IsRequiredToUnlockNextModule = true,
+            ValidationRules =
+            [
+                BossSnippet("Utilise Console.WriteLine", "Console.WriteLine", 1),
+                BossCount("Affiche deux lignes", "Console.WriteLine", 2, 2),
+                BossSnippet("Declare une variable string", "string player", 3),
+                BossSnippet("Utilise un entier bonus", "int bonus", 4),
+                BossSnippet("Utilise un booleen", "bool isReady", 5),
+                BossSnippet("Calcule le score avec un operateur", "baseScore + bonus", 6),
+                BossOutput("Affiche le score final", "Ada - score 37", 7),
+                BossOutput("Affiche le statut pret", "Pret: True", 8)
+            ],
+            Hints =
+            [
+                BossHint("Commence par mettre bonus a 7 et isReady a true.", 1),
+                BossHint("Cree une variable finalScore avec baseScore + bonus avant les affichages.", 2),
+                BossHint("La premiere ligne concatene player et finalScore. La deuxieme affiche le booleen isReady.", 3)
+            ],
+            Solution =
+            """
+            using System;
+
+            string player = "Ada";
+            int baseScore = 30;
+            int bonus = 7;
+            bool isReady = true;
+            int finalScore = baseScore + bonus;
+
+            Console.WriteLine(player + " - score " + finalScore);
+            Console.WriteLine("Pret: " + isReady);
+            """
+        };
+
+    private static IntermediateBoss SqlModuleOneIntermediateBoss() =>
+        new()
+        {
+            Slug = "sql-module-1-intermediate-boss",
+            Title = "Monstre intermediaire - Fondations SQL",
+            Objective = "Prouver que tu sais lire une table, choisir les colonnes utiles et filtrer avec WHERE.",
+            Instructions = "Ecris une requete qui affiche Name, Price et Stock des produits actifs, en stock, coutant moins de 40. La requete doit utiliser SELECT, FROM et WHERE, sans SELECT *.",
+            StarterCode =
+            """
+            SELECT Name, Price, Stock
+            FROM Products
+            -- Ajoute le filtre ici
+            """,
+            ExpectedResult = "Trois lignes: C# Basics, SQL Server Guide et RPG Dice Set avec les colonnes Name, Price, Stock.",
+            XpReward = 80,
+            IsRequiredToUnlockNextModule = true,
+            ValidationRules =
+            [
+                BossSnippet("Utilise SELECT", "SELECT", 1),
+                BossSnippet("Lit la table Products", "FROM Products", 2),
+                BossSnippet("Utilise WHERE", "WHERE", 3),
+                BossSnippet("Filtre les produits actifs", "IsActive = 1", 4),
+                BossSnippet("Filtre le prix", "Price < 40", 5),
+                BossSnippet("Filtre le stock", "Stock > 0", 6),
+                BossSqlColumns("Retourne Name, Price, Stock", "Name,Price,Stock", 7),
+                BossSqlRows("Retourne trois produits", 3, 8),
+                BossOutput("Contient C# Basics", "C# Basics", 9),
+                BossOutput("Contient SQL Server Guide", "SQL Server Guide", 10),
+                BossOutput("Contient RPG Dice Set", "RPG Dice Set", 11),
+                BossForbidden("N'utilise pas SELECT *", "SELECT *", 12)
+            ],
+            Hints =
+            [
+                BossHint("La requete part de Products et selectionne seulement Name, Price et Stock.", 1),
+                BossHint("Le WHERE doit combiner trois conditions avec AND.", 2),
+                BossHint("Les conditions attendues portent sur IsActive, Price et Stock.", 3)
+            ],
+            Solution =
+            """
+            SELECT Name, Price, Stock
+            FROM Products
+            WHERE IsActive = 1 AND Price < 40 AND Stock > 0;
+            """
+        };
+
+    private static IntermediateBoss BuildIntermediateBossFromModule(Course course, Chapter chapter)
+    {
+        var lesson = chapter.Lessons
+            .Where(lesson => !lesson.IsBossFinal)
+            .OrderByDescending(lesson => lesson.SortOrder)
+            .First();
+
+        return new IntermediateBoss
+        {
+            Slug = $"{course.Slug}-module-{chapter.SortOrder}-intermediate-boss",
+            Title = $"Monstre intermediaire - {chapter.Title.Replace("Module " + chapter.SortOrder + " - ", "")}",
+            Objective = $"Consolider les notions du {chapter.Title.ToLowerInvariant()}.",
+            Instructions = $"{lesson.ExercisePrompt} Reussis cet exercice de consolidation pour deverrouiller le module suivant.",
+            StarterCode = lesson.StarterCode,
+            ExpectedResult = lesson.SuccessFeedback,
+            XpReward = Math.Max(70, lesson.XpReward + 20),
+            IsRequiredToUnlockNextModule = true,
+            ValidationRules = lesson.Tests.Select(ToBossRule).ToList(),
+            Hints =
+            [
+                BossHint(lesson.FailureFeedback, 1),
+                BossHint(lesson.ConceptSummary, 2),
+                BossHint("Relis les criteres de validation et corrige un point a la fois.", 3)
+            ],
+            Solution = lesson.FinalCorrection
+        };
+    }
+
+    private static IntermediateBossValidationRule ToBossRule(LessonTest test) =>
+        new()
+        {
+            Name = test.Name,
+            TestType = test.TestType,
+            ExpectedOutput = test.ExpectedOutput,
+            RequiredSnippet = test.RequiredSnippet,
+            HiddenCode = test.HiddenCode,
+            MinCount = test.MinCount,
+            ExpectedColumns = test.ExpectedColumns,
+            ExpectedRowCount = test.ExpectedRowCount,
+            SortOrder = test.SortOrder
+        };
 
     private static Lesson Lesson(
         string slug,
@@ -4185,4 +4368,25 @@ public static class SeedData
 
     private static LessonTest Forbidden(string name, string forbiddenSnippet) =>
         new() { Name = name, TestType = LessonTestType.SqlForbiddenSnippet, RequiredSnippet = forbiddenSnippet };
+
+    private static IntermediateBossValidationRule BossOutput(string name, string expectedOutput, int sortOrder) =>
+        new() { Name = name, TestType = LessonTestType.ExpectedOutput, ExpectedOutput = expectedOutput, SortOrder = sortOrder };
+
+    private static IntermediateBossValidationRule BossSnippet(string name, string requiredSnippet, int sortOrder) =>
+        new() { Name = name, TestType = LessonTestType.RequiredSnippet, RequiredSnippet = requiredSnippet, SortOrder = sortOrder };
+
+    private static IntermediateBossValidationRule BossCount(string name, string requiredSnippet, int minCount, int sortOrder) =>
+        new() { Name = name, TestType = LessonTestType.MinSnippetCount, RequiredSnippet = requiredSnippet, MinCount = minCount, SortOrder = sortOrder };
+
+    private static IntermediateBossValidationRule BossSqlColumns(string name, string expectedColumns, int sortOrder) =>
+        new() { Name = name, TestType = LessonTestType.SqlExpectedColumns, ExpectedColumns = expectedColumns, SortOrder = sortOrder };
+
+    private static IntermediateBossValidationRule BossSqlRows(string name, int expectedRowCount, int sortOrder) =>
+        new() { Name = name, TestType = LessonTestType.SqlExpectedRowCount, ExpectedRowCount = expectedRowCount, SortOrder = sortOrder };
+
+    private static IntermediateBossValidationRule BossForbidden(string name, string forbiddenSnippet, int sortOrder) =>
+        new() { Name = name, TestType = LessonTestType.SqlForbiddenSnippet, RequiredSnippet = forbiddenSnippet, SortOrder = sortOrder };
+
+    private static IntermediateBossHint BossHint(string content, int sortOrder) =>
+        new() { Content = content, SortOrder = sortOrder };
 }

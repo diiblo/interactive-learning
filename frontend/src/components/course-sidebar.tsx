@@ -1,15 +1,23 @@
 "use client";
 
-import { CheckCircle, Lock, Swords } from "lucide-react";
-import type { CourseMapDto, LessonMapItemDto } from "@/types/api";
+import { CheckCircle, Lock, Shield, Swords } from "lucide-react";
+import type { CourseMapDto, IntermediateBossMapItemDto, LessonMapItemDto } from "@/types/api";
 
 type CourseSidebarProps = {
   courseMap: CourseMapDto | null;
   activeLessonId: number | null;
+  activeIntermediateBossId: number | null;
   onSelectLesson: (lesson: LessonMapItemDto) => void;
+  onSelectIntermediateBoss: (boss: IntermediateBossMapItemDto) => void;
 };
 
-export function CourseSidebar({ courseMap, activeLessonId, onSelectLesson }: CourseSidebarProps) {
+export function CourseSidebar({
+  courseMap,
+  activeLessonId,
+  activeIntermediateBossId,
+  onSelectLesson,
+  onSelectIntermediateBoss,
+}: CourseSidebarProps) {
   return (
     <aside className="flex w-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:w-80">
       <div className="border-b border-[var(--color-border)] px-5 py-4">
@@ -32,6 +40,13 @@ export function CourseSidebar({ courseMap, activeLessonId, onSelectLesson }: Cou
                   onSelectLesson={onSelectLesson}
                 />
               ))}
+              {chapter.intermediateBoss ? (
+                <IntermediateBossButton
+                  boss={chapter.intermediateBoss}
+                  isActive={chapter.intermediateBoss.id === activeIntermediateBossId}
+                  onSelectIntermediateBoss={onSelectIntermediateBoss}
+                />
+              ) : null}
             </div>
           </section>
         ))}
@@ -47,6 +62,45 @@ export function CourseSidebar({ courseMap, activeLessonId, onSelectLesson }: Cou
         )}
       </div>
     </aside>
+  );
+}
+
+function IntermediateBossButton({
+  boss,
+  isActive,
+  onSelectIntermediateBoss,
+}: {
+  boss: IntermediateBossMapItemDto;
+  isActive: boolean;
+  onSelectIntermediateBoss: (boss: IntermediateBossMapItemDto) => void;
+}) {
+  const isCompleted = boss.status === "Completed";
+
+  return (
+    <button
+      type="button"
+      disabled={boss.isLocked}
+      onClick={() => onSelectIntermediateBoss(boss)}
+      className={`flex w-full items-center gap-3 rounded-md border px-3 py-3 text-left transition ${
+        isActive
+          ? "border-[var(--color-error)] bg-[#2d1f25] text-white"
+          : "border-[var(--color-border)] bg-[#151017] text-[var(--color-text)] hover:border-[var(--color-error)]/70"
+      } disabled:cursor-not-allowed disabled:opacity-45`}
+    >
+      {boss.isLocked ? (
+        <Lock size={16} className="shrink-0 text-[var(--color-text-muted)]" />
+      ) : isCompleted ? (
+        <CheckCircle size={16} className="shrink-0 text-[var(--color-success)]" />
+      ) : (
+        <Shield size={16} className="shrink-0 text-[var(--color-error)]" />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{boss.title}</span>
+        <span className="text-xs text-[var(--color-text-muted)]">
+          {boss.xpReward} XP · requis pour le module suivant
+        </span>
+      </span>
+    </button>
   );
 }
 

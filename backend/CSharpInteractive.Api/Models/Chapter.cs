@@ -10,4 +10,5 @@ public sealed class Chapter
     public int SortOrder { get; set; }
     public int RequiredXp { get; set; }
     public List<Lesson> Lessons { get; set; } = [];
+    public IntermediateBoss? IntermediateBoss { get; set; }
 }

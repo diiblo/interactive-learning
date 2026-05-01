@@ -2,6 +2,9 @@ import type {
   CourseMapDto,
   CourseSummaryDto,
   ExecutionResultDto,
+  IntermediateBossDetailDto,
+  IntermediateBossHintResultDto,
+  IntermediateBossSolutionDto,
   LessonDetailDto,
   ProfileDto,
   ProgressDto,
@@ -33,6 +36,7 @@ export const apiClient = {
   getCourses: () => request<CourseSummaryDto[]>("/courses"),
   getCourseMap: (courseId: number) => request<CourseMapDto>(`/courses/${courseId}/map`),
   getLesson: (lessonId: number) => request<LessonDetailDto>(`/lessons/${lessonId}`),
+  getIntermediateBoss: (moduleId: number) => request<IntermediateBossDetailDto>(`/intermediate-bosses/modules/${moduleId}`),
   getSqlSchema: () => request<SqlSchemaDto>("/sql/lessons/schema"),
   getSqlLesson: (lessonId: number) => request<LessonDetailDto>(`/sql/lessons/${lessonId}`),
   runLesson: (lessonId: number, code: string) =>
@@ -54,6 +58,24 @@ export const apiClient = {
     request<SubmitResultDto>(`/sql/lessons/${lessonId}/submit`, {
       method: "POST",
       body: JSON.stringify({ code }),
+    }),
+  runIntermediateBoss: (bossId: number, code: string) =>
+    request<ExecutionResultDto>(`/intermediate-bosses/${bossId}/run`, {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+  submitIntermediateBoss: (bossId: number, code: string) =>
+    request<SubmitResultDto>(`/intermediate-bosses/${bossId}/submit`, {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+  revealIntermediateBossHint: (bossId: number) =>
+    request<IntermediateBossHintResultDto>(`/intermediate-bosses/${bossId}/hint`, {
+      method: "POST",
+    }),
+  revealIntermediateBossSolution: (bossId: number) =>
+    request<IntermediateBossSolutionDto>(`/intermediate-bosses/${bossId}/solution`, {
+      method: "POST",
     }),
   runBossFinal: (code: string) =>
     request<ExecutionResultDto>("/boss-final/run", {

@@ -27,6 +27,8 @@ public sealed class CoursesController(AppDbContext db, ProgressService progressS
         var course = await db.Courses
             .Include(course => course.Chapters.OrderBy(chapter => chapter.SortOrder))
             .ThenInclude(chapter => chapter.Lessons.OrderBy(lesson => lesson.SortOrder))
+            .Include(course => course.Chapters)
+            .ThenInclude(chapter => chapter.IntermediateBoss)
             .FirstOrDefaultAsync(course => course.Id == courseId);
 
         if (course is null)
@@ -37,6 +39,10 @@ public sealed class CoursesController(AppDbContext db, ProgressService progressS
         var progress = await db.LessonProgress
             .Where(item => item.UserProfileId == profile.Id)
             .ToDictionaryAsync(item => item.LessonId);
+
+        var bossProgress = await db.IntermediateBossProgress
+            .Where(item => item.UserProfileId == profile.Id)
+            .ToDictionaryAsync(item => item.IntermediateBossId);
 
         var chapters = course.Chapters
             .OrderBy(chapter => chapter.SortOrder)
@@ -49,7 +55,8 @@ public sealed class CoursesController(AppDbContext db, ProgressService progressS
                     .Where(lesson => !lesson.IsBossFinal)
                     .OrderBy(lesson => lesson.SortOrder)
                     .Select(lesson => ToMapItem(lesson, progress))
-                    .ToList()))
+                    .ToList(),
+                chapter.IntermediateBoss is null ? null : ToIntermediateBossMapItem(chapter.IntermediateBoss, bossProgress)))
             .Where(chapter => chapter.Lessons.Any())
             .ToList();
 
@@ -66,5 +73,21 @@ public sealed class CoursesController(AppDbContext db, ProgressService progressS
     {
         var status = progress.TryGetValue(lesson.Id, out var item) ? item.Status : LessonProgressStatus.Locked;
         return new LessonMapItemDto(lesson.Id, lesson.Slug, lesson.Title, lesson.XpReward, status, status == LessonProgressStatus.Locked, lesson.IsBossFinal);
+    }
+
+    private static IntermediateBossMapItemDto ToIntermediateBossMapItem(
+        IntermediateBoss boss,
+        IReadOnlyDictionary<int, IntermediateBossProgress> progress)
+    {
+        var status = progress.TryGetValue(boss.Id, out var item) ? item.Status : LessonProgressStatus.Locked;
+        return new IntermediateBossMapItemDto(
+            boss.Id,
+            boss.ModuleId,
+            boss.Slug,
+            boss.Title,
+            boss.XpReward,
+            status,
+            status == LessonProgressStatus.Locked,
+            boss.IsRequiredToUnlockNextModule);
     }
 }

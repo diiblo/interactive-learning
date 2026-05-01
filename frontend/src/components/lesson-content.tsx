@@ -35,14 +35,6 @@ export function LessonContent({ lesson }: { lesson: LessonDetailDto | null }) {
 
         <InfoBlock icon={<Lightbulb size={18} />} title="Exercice" content={lesson.exercisePrompt} />
 
-        {lesson.finalCorrection ? (
-          <div className="rounded-md border border-[var(--color-border)] bg-[#0d1117]">
-            <div className="border-b border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-white">Correction finale</div>
-            <pre className="overflow-x-auto p-4 text-sm text-[#a5d6ff]">
-              <code>{lesson.finalCorrection}</code>
-            </pre>
-          </div>
-        ) : null}
       </div>
     </section>
   );

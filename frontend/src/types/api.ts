@@ -35,12 +35,24 @@ export type LessonMapItemDto = {
   isBossFinal: boolean;
 };
 
+export type IntermediateBossMapItemDto = {
+  id: number;
+  moduleId: number;
+  slug: string;
+  title: string;
+  xpReward: number;
+  status: LessonProgressStatus;
+  isLocked: boolean;
+  isRequiredToUnlockNextModule: boolean;
+};
+
 export type ChapterMapDto = {
   id: number;
   title: string;
   description: string;
   requiredXp: number;
   lessons: LessonMapItemDto[];
+  intermediateBoss: IntermediateBossMapItemDto | null;
 };
 
 export type CourseMapDto = {
@@ -68,6 +80,40 @@ export type LessonDetailDto = {
   xpReward: number;
   isBossFinal: boolean;
   status: LessonProgressStatus;
+};
+
+export type IntermediateBossDetailDto = {
+  id: number;
+  moduleId: number;
+  slug: string;
+  title: string;
+  editorLanguage: string;
+  objective: string;
+  instructions: string;
+  starterCode: string;
+  expectedResult: string;
+  validationRules: string[];
+  xpReward: number;
+  isRequiredToUnlockNextModule: boolean;
+  status: LessonProgressStatus;
+  attempts: number;
+  failedAttempts: number;
+  hintsRevealed: number;
+  canRevealSolution: boolean;
+};
+
+export type IntermediateBossHintDto = {
+  index: number;
+  content: string;
+};
+
+export type IntermediateBossHintResultDto = {
+  hints: IntermediateBossHintDto[];
+  hasMoreHints: boolean;
+};
+
+export type IntermediateBossSolutionDto = {
+  solution: string;
 };
 
 export type ExecutionResultDto = {

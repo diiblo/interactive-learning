@@ -15,9 +15,31 @@ PLAN.md                         Architecture et plan d'implementation
 TODO.md                         Checklist d'avancement
 ```
 
-## Frontend
+## Installation et lancement
 
-Le package npm s'appelle `interactive-learning`.
+### Prerequis
+
+- Node.js 20 ou plus recent
+- npm
+- SDK .NET 8
+
+SQL Server Docker est optionnel. Le projet fonctionne sans lui grace au moteur SQL pedagogique en memoire.
+
+### Lancer le projet
+
+Ouvrir deux terminaux depuis la racine du depot.
+
+Terminal 1 - API backend :
+
+```bash
+cd backend/CSharpInteractive.Api
+dotnet restore
+dotnet run
+```
+
+L'API demarre sur `http://localhost:5000` et expose ses routes sous `http://localhost:5000/api`.
+
+Terminal 2 - application web :
 
 ```bash
 cd frontend
@@ -25,17 +47,48 @@ npm install
 npm run dev
 ```
 
-Par defaut, le frontend appelle l'API sur `http://localhost:5000/api`.
+Le package npm du frontend s'appelle `interactive-learning`.
 
-Pour changer l'URL :
+Ouvrir ensuite `http://localhost:3000` dans le navigateur.
+
+Par defaut, le frontend appelle l'API sur `http://localhost:5000/api`. Si l'API utilise une autre URL, lancer le frontend avec :
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api npm run dev
 ```
 
+### Lancement rapide apres installation
+
+Une fois les dependances restaurees, les commandes quotidiennes sont :
+
+```bash
+cd backend/CSharpInteractive.Api
+dotnet run
+```
+
+```bash
+cd frontend
+npm run dev
+```
+
+## Frontend
+
+Le frontend est une application Next.js situee dans `frontend/`.
+
+Commandes utiles :
+
+```bash
+cd frontend
+npm run dev
+npm run lint
+npm run build
+```
+
 ## Backend
 
-Installer le SDK .NET 8, puis :
+Le backend actif est une API ASP.NET Core situee dans `backend/CSharpInteractive.Api/`.
+
+Commandes utiles :
 
 ```bash
 cd backend/CSharpInteractive.Api

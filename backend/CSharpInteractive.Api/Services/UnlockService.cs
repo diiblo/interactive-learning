@@ -37,8 +37,15 @@ public sealed class UnlockService(AppDbContext db)
             var shouldBeAvailable = false;
             if (lesson.IsBossFinal)
             {
-                shouldBeAvailable = lessons.Where(item => item.Chapter!.CourseId == courseId && item.IsBossPrerequisite).All(item =>
-                    progress.TryGetValue(item.Id, out var itemProgress) && itemProgress.Status == LessonProgressStatus.Completed);
+                var courseIntermediateBosses = intermediateBosses.Where(item =>
+                    item.IsRequiredToUnlockNextModule &&
+                    item.Module!.CourseId == courseId);
+
+                shouldBeAvailable =
+                    lessons.Where(item => item.Chapter!.CourseId == courseId && item.IsBossPrerequisite).All(item =>
+                        progress.TryGetValue(item.Id, out var itemProgress) && itemProgress.Status == LessonProgressStatus.Completed) &&
+                    courseIntermediateBosses.All(item =>
+                        bossProgress.TryGetValue(item.Id, out var itemProgress) && itemProgress.Status == LessonProgressStatus.Completed);
             }
             else if (lesson.Chapter is not null && lesson.Chapter.RequiredXp <= profile.TotalXp)
             {

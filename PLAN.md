@@ -2,15 +2,16 @@
 
 ## 1. Architecture technique
 
-Objectif: application web interactive, progressive et gamifiee pour apprendre C# et SQL / SQL Server depuis zero jusqu'a un niveau pratique.
+Objectif: application web interactive, progressive et gamifiee pour apprendre C#, SQL / SQL Server et PHP / Symfony depuis zero jusqu'a un niveau pratique.
 
 Stack:
 
 - Frontend: Next.js, TypeScript, TailwindCSS.
-- Editeur: Monaco Editor configure pour C# et SQL.
+- Editeur: Monaco Editor configure pour C#, SQL et PHP.
 - Backend: ASP.NET Core Web API.
 - Execution C#: Roslyn en memoire avec capture console, diagnostics et timeout.
 - Execution SQL: requetes SQL Server controlees cote backend sur base isolee ou reinitialisable.
+- Validation PHP / Symfony: validation statique pedagogique par criteres, snippets et structures Symfony attendues.
 - Donnees applicatives: SQLite avec Entity Framework Core.
 - Donnees pedagogiques SQL: SQL Server LocalDB ou SQL Server Docker.
 - Acces DB SQL: Entity Framework Core ou ADO.NET selon les besoins de correction.
@@ -20,6 +21,7 @@ Parcours obligatoires:
 
 1. C#.
 2. SQL / SQL Server.
+3. PHP / Symfony.
 
 Flux principal:
 
@@ -27,9 +29,16 @@ Flux principal:
 2. L'apprenant lit une courte lecon, modifie le code dans Monaco, puis lance le code.
 3. Pour C#, le backend compile et execute le code via Roslyn.
 4. Pour SQL, le backend verifie la securite de la requete puis l'execute sur une base pedagogique isolee.
-5. La soumission execute les tests automatiques de la lecon.
-6. Si les tests passent, le backend attribue XP, badges et deblocages dans le parcours concerne.
-7. Le frontend rafraichit la progression visible et le niveau global.
+5. Pour PHP / Symfony, le backend valide les structures demandees sans executer un vrai projet Symfony.
+6. La soumission execute les tests automatiques de la lecon.
+7. Si les tests passent, le backend attribue XP, badges et deblocages dans le parcours concerne.
+8. Le frontend rafraichit la progression visible et le niveau global.
+
+Progression par modules:
+
+- Chaque module de chaque parcours se termine par un Monstre intermediaire.
+- Le module suivant reste verrouille tant que le Monstre intermediaire du module actuel n'est pas reussi.
+- Le Boss Final d'un parcours reste verrouille tant que les lecons et monstres requis du parcours ne sont pas termines.
 
 Securite SQL obligatoire:
 
@@ -123,7 +132,7 @@ interactive-learning/
 - `Slug`
 - `Title`
 - `Description`
-- `Language`: `csharp` ou `sqlserver`
+- `Language`: `csharp`, `sqlserver` ou `php-symfony`
 - `SortOrder`
 
 ### Chapter
@@ -157,10 +166,50 @@ Chaque lecon doit porter toute la structure pedagogique obligatoire:
 - `IsBossPrerequisite`
 - `IsBossFinal`
 - `LessonKind`: `CSharp` ou `Sql`
+- `LessonKind`: `CSharp`, `Sql` ou `PhpSymfony`
 
 Extension pedagogique recommandee pour une v2 du modele:
 
 - `CommonMistakes`: erreurs frequentes pour enrichir le feedback.
+
+### IntermediateBoss
+
+- `Id`
+- `ModuleId`
+- `Title`
+- `Objective`
+- `Instructions`
+- `StarterCode`
+- `ExpectedResult`
+- `ValidationRules`
+- `Hints`
+- `Solution`
+- `XpReward`
+- `IsRequiredToUnlockNextModule`
+
+## Parcours PHP / Symfony
+
+Contraintes:
+
+- Le parcours se concentre uniquement sur PHP et Symfony.
+- Pas de modules dedies a Git, Docker, Jira, PhpStorm, MySQL ou NoSQL.
+- Doctrine est aborde uniquement dans le cadre Symfony.
+
+Modules:
+
+1. Fondations PHP: syntaxe, variables, types, conditions, boucles, fonctions.
+2. PHP oriente objet: classes, objets, proprietes, methodes, constructeurs, encapsulation.
+3. Bases de Symfony: structure projet, routes, controllers, responses, Twig, parametres.
+4. Formulaires Symfony: creation, validation, contraintes, erreurs, soumission.
+5. Doctrine avec Symfony: entites, repositories, migrations, relations simples, CRUD.
+6. Architecture Symfony: services, injection de dependances, configuration, separation controller/service, bonnes pratiques.
+7. Securite Symfony: authentification, utilisateurs, roles, routes protegees, autorisations simples.
+8. Projet pratique Symfony: mini-application MVC avec routes, controllers, Twig, formulaires, Doctrine, services et securite simple.
+
+Boss Final PHP / Symfony:
+
+- Mini-application Symfony de gestion de produits.
+- Validation attendue: PHP de base, POO, routes, controllers, Twig, formulaires, validation, Doctrine, services, securite simple et architecture propre.
 
 ### LessonTest
 

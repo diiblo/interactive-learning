@@ -13,6 +13,7 @@ public sealed class LessonsController(
     AppDbContext db,
     RoslynExecutionService executionService,
     LessonCorrectionService correctionService,
+    PhpSymfonyValidationService phpSymfonyValidationService,
     ProgressService progressService) : ControllerBase
 {
     [HttpGet("{lessonId:int}")]
@@ -48,6 +49,12 @@ public sealed class LessonsController(
             return access.Error;
         }
 
+        var lesson = access.Lesson!;
+        if (lesson.Chapter?.Course?.Language == "php-symfony")
+        {
+            return await phpSymfonyValidationService.ValidateAsync(request.Code);
+        }
+
         return await executionService.ExecuteAsync(request.Code);
     }
 
@@ -62,7 +69,9 @@ public sealed class LessonsController(
 
         var profile = await progressService.GetProfileAsync();
         var lesson = access.Lesson!;
-        var correction = await correctionService.SubmitAsync(lesson, request.Code);
+        var correction = lesson.Chapter?.Course?.Language == "php-symfony"
+            ? await phpSymfonyValidationService.SubmitAsync(lesson, request.Code)
+            : await correctionService.SubmitAsync(lesson, request.Code);
         return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed);
     }
 
@@ -93,7 +102,7 @@ public sealed class LessonsController(
             lesson.Id,
             lesson.Slug,
             lesson.Title,
-            lesson.Chapter?.Course?.Language == "sqlserver" ? "sql" : "csharp",
+            ToEditorLanguage(lesson),
             lesson.Objective,
             lesson.ConceptSummary,
             lesson.CommonMistakes,
@@ -107,4 +116,12 @@ public sealed class LessonsController(
             lesson.XpReward,
             lesson.IsBossFinal,
             status);
+
+    private static string ToEditorLanguage(Lesson lesson) =>
+        lesson.Chapter?.Course?.Language switch
+        {
+            "sqlserver" => "sql",
+            "php-symfony" => "php",
+            _ => "csharp"
+        };
 }

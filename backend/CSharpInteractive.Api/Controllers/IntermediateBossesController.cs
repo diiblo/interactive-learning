@@ -129,7 +129,12 @@ public sealed class IntermediateBossesController(
             boss.ModuleId,
             boss.Slug,
             boss.Title,
-            boss.Module?.Course?.Language == "sqlserver" ? "sql" : "csharp",
+            boss.Module?.Course?.Language switch
+            {
+                "sqlserver" => "sql",
+                "php-symfony" => "php",
+                _ => "csharp"
+            },
             boss.Objective,
             boss.Instructions,
             boss.StarterCode,

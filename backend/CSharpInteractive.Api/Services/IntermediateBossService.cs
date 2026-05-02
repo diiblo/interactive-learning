@@ -9,6 +9,7 @@ public sealed class IntermediateBossService(
     AppDbContext db,
     RoslynExecutionService roslynExecutionService,
     SqlExecutionService sqlExecutionService,
+    PhpSymfonyValidationService phpSymfonyValidationService,
     ProgressService progressService,
     UnlockService unlockService)
 {
@@ -18,6 +19,11 @@ public sealed class IntermediateBossService(
         {
             var result = await sqlExecutionService.ExecuteQueryAsync(code);
             return new ExecutionResultDto(result.Success, result.Output, result.Diagnostics, result.DurationMs, result.Columns, result.Rows);
+        }
+
+        if (IsPhpSymfonyBoss(boss))
+        {
+            return await phpSymfonyValidationService.ValidateAsync(code);
         }
 
         return await roslynExecutionService.ExecuteAsync(code);
@@ -31,7 +37,11 @@ public sealed class IntermediateBossService(
         if (!execution.Success)
         {
             results.Add(new TestResultDto(
-                IsSqlBoss(boss) ? "Syntaxe et securite SQL" : "Compilation et execution",
+                IsSqlBoss(boss)
+                    ? "Syntaxe et securite SQL"
+                    : IsPhpSymfonyBoss(boss)
+                        ? "Validation statique PHP/Symfony"
+                        : "Compilation et execution",
                 false,
                 string.Join("\n", execution.Diagnostics)));
         }
@@ -135,6 +145,11 @@ public sealed class IntermediateBossService(
             return EvaluateSqlRule(rule, code, execution);
         }
 
+        if (rule.IntermediateBoss?.Module?.Course?.Language == "php-symfony")
+        {
+            return phpSymfonyValidationService.Evaluate(rule, code);
+        }
+
         return rule.TestType switch
         {
             LessonTestType.ExpectedOutput => Contains(execution.Output, rule.ExpectedOutput)
@@ -196,6 +211,8 @@ public sealed class IntermediateBossService(
     }
 
     private static bool IsSqlBoss(IntermediateBoss boss) => boss.Module?.Course?.Language == "sqlserver";
+
+    private static bool IsPhpSymfonyBoss(IntermediateBoss boss) => boss.Module?.Course?.Language == "php-symfony";
 
     private static bool Contains(string source, string? expected) =>
         !string.IsNullOrWhiteSpace(expected) && source.Contains(expected, StringComparison.OrdinalIgnoreCase);

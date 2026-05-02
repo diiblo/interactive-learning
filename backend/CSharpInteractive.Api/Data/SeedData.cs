@@ -7,8 +7,10 @@ public static class SeedData
 {
     public static async Task EnsureSeededAsync(AppDbContext db)
     {
+        var seededFullCatalog = false;
         if (!await db.Courses.AnyAsync())
         {
+            seededFullCatalog = true;
             var course = new Course
             {
                 Slug = "csharp-foundations",
@@ -4106,15 +4108,25 @@ public static class SeedData
                 ]
             };
 
+            var phpCourse = PhpSymfonyCourse();
+
             AttachIntermediateBosses(course);
             AttachIntermediateBosses(sqlCourse);
+            AttachIntermediateBosses(phpCourse);
 
-            db.Courses.AddRange(course, sqlCourse);
+            db.Courses.AddRange(course, sqlCourse, phpCourse);
             db.Badges.AddRange(
                 new Badge { Slug = "first-run", Name = "Premier run", Description = "Terminer une premiere lecon.", IconName = "play", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 },
                 new Badge { Slug = "hundred-xp", Name = "100 XP", Description = "Atteindre 100 points d'experience.", IconName = "star", RuleType = BadgeRuleType.TotalXp, RuleValue = 100 },
                 new Badge { Slug = "boss-slayer", Name = "Boss Final", Description = "Reussir le mini-projet final.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinal, RuleValue = 1 },
-                new Badge { Slug = "sql-first-select", Name = "Premier SELECT", Description = "Terminer une premiere lecon SQL.", IconName = "database", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 });
+                new Badge { Slug = "sql-first-select", Name = "Premier SELECT", Description = "Terminer une premiere lecon SQL.", IconName = "database", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 },
+                new Badge { Slug = "php-first-script", Name = "Premier script PHP", Description = "Terminer une premiere lecon PHP/Symfony.", IconName = "code", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 },
+                new Badge { Slug = "symfony-product-builder", Name = "Produit Symfony", Description = "Avancer dans le parcours PHP/Symfony.", IconName = "box", RuleType = BadgeRuleType.TotalXp, RuleValue = 250 });
+        }
+
+        if (!seededFullCatalog)
+        {
+            await EnsurePhpSymfonyCourseSeededAsync(db);
         }
 
         await EnsureIntermediateBossesSeededAsync(db);
@@ -4130,13 +4142,517 @@ public static class SeedData
     private static Chapter Chapter(string title, string description, int sortOrder, int requiredXp, List<Lesson> lessons) =>
         new() { Title = title, Description = description, SortOrder = sortOrder, RequiredXp = requiredXp, Lessons = lessons };
 
-    private static async Task EnsureIntermediateBossesSeededAsync(AppDbContext db)
+    private static async Task EnsurePhpSymfonyCourseSeededAsync(AppDbContext db)
     {
-        if (await db.IntermediateBosses.AnyAsync())
+        if (!await db.Courses.AnyAsync(course => course.Slug == "php-symfony"))
         {
-            return;
+            var phpCourse = PhpSymfonyCourse();
+            AttachIntermediateBosses(phpCourse);
+            db.Courses.Add(phpCourse);
         }
 
+        if (!await db.Badges.AnyAsync(badge => badge.Slug == "php-first-script"))
+        {
+            db.Badges.Add(new Badge { Slug = "php-first-script", Name = "Premier script PHP", Description = "Terminer une premiere lecon PHP/Symfony.", IconName = "code", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 });
+        }
+
+        if (!await db.Badges.AnyAsync(badge => badge.Slug == "symfony-product-builder"))
+        {
+            db.Badges.Add(new Badge { Slug = "symfony-product-builder", Name = "Produit Symfony", Description = "Avancer dans le parcours PHP/Symfony.", IconName = "box", RuleType = BadgeRuleType.TotalXp, RuleValue = 250 });
+        }
+    }
+
+    private static Course PhpSymfonyCourse() =>
+        new()
+        {
+            Slug = "php-symfony",
+            Title = "PHP / Symfony",
+            Description = "Un parcours progressif centre sur PHP moderne et Symfony.",
+            Language = "php-symfony",
+            SortOrder = 3,
+            Chapters =
+            [
+                Chapter("Module 1 - Fondations PHP", "Syntaxe PHP, variables, types, conditions, boucles et fonctions.", 1, 0,
+                [
+                    PhpLesson(
+                        "php-syntax",
+                        "Syntaxe PHP",
+                        "Comprendre la forme minimale d'un script PHP et l'affichage avec echo.",
+                        "Un fichier PHP commence souvent par <?php. Les instructions se terminent par un point-virgule. echo affiche une valeur.",
+                        "<?php\necho \"Bonjour PHP\";",
+                        "Cree un script qui affiche Bonjour PHP avec echo.",
+                        """
+                        <?php
+
+                        // Affiche Bonjour PHP
+                        """,
+                        "Le script PHP contient la balise d'ouverture, echo et le texte attendu.",
+                        "Place <?php au debut, puis utilise echo avec le texte exact.",
+                        25,
+                        1,
+                        [
+                            Required("Commence par la balise PHP", "<?php"),
+                            Required("Utilise echo", "echo"),
+                            Output("Contient Bonjour PHP", "Bonjour PHP")
+                        ],
+                        conceptSummary: "La syntaxe PHP repose sur une balise d'ouverture, des instructions et des points-virgules.",
+                        finalCorrection:
+                        """
+                        <?php
+
+                        echo "Bonjour PHP";
+                        """),
+                    PhpLesson(
+                        "php-variables",
+                        "Variables",
+                        "Stocker une valeur dans une variable PHP et la reutiliser.",
+                        "Une variable PHP commence par $. Elle peut contenir du texte, un nombre, un booleen ou une structure plus complexe.",
+                        "<?php\n$name = \"Ada\";\necho $name;",
+                        "Declare $name avec Ada, puis affiche Bonjour Ada.",
+                        """
+                        <?php
+
+                        $name = "";
+                        // Affiche Bonjour Ada
+                        """,
+                        "La variable est declaree et reutilisee dans l'affichage.",
+                        "Une variable PHP commence par $. Concatene le texte avec la variable.",
+                        35,
+                        2,
+                        [
+                            Required("Declare $name", "$name"),
+                            Required("Stocke Ada", "\"Ada\""),
+                            Required("Utilise echo", "echo"),
+                            Output("Contient Bonjour Ada", "Bonjour Ada")
+                        ],
+                        conceptSummary: "Une variable PHP porte un nom prefixe par $ et permet de reutiliser une valeur.",
+                        finalCorrection:
+                        """
+                        <?php
+
+                        $name = "Ada";
+                        echo "Bonjour " . $name;
+                        """),
+                    PhpLesson(
+                        "php-types",
+                        "Types",
+                        "Representer texte, entier, decimal et booleen en PHP.",
+                        "PHP type les valeurs dynamiquement. Les bases utiles sont string, int, float et bool.",
+                        "<?php\n$level = 3;\n$price = 9.99;\n$active = true;",
+                        "Declare $name, $level, $price et $active, puis affiche Ada niveau 3.",
+                        """
+                        <?php
+
+                        $name = "";
+                        $level = 0;
+                        $price = 0.0;
+                        $active = false;
+                        """,
+                        "Les valeurs de base sont presentes et reutilisees.",
+                        "Utilise une chaine, un entier, un decimal et un booleen.",
+                        40,
+                        3,
+                        [
+                            Required("Utilise $name", "$name"),
+                            Required("Utilise $level", "$level"),
+                            Required("Utilise $price", "$price"),
+                            Required("Utilise $active", "$active"),
+                            Required("Active le booleen", "true"),
+                            Output("Contient Ada niveau 3", "Ada niveau 3")
+                        ],
+                        conceptSummary: "PHP sait manipuler plusieurs types meme sans annotation explicite.",
+                        finalCorrection:
+                        """
+                        <?php
+
+                        $name = "Ada";
+                        $level = 3;
+                        $price = 9.99;
+                        $active = true;
+
+                        echo $name . " niveau " . $level;
+                        """),
+                    PhpLesson(
+                        "php-conditions",
+                        "Conditions",
+                        "Choisir un affichage selon une condition avec if et else.",
+                        "if execute un bloc si une condition est vraie. else gere le cas contraire.",
+                        "<?php\n$stock = 5;\nif ($stock > 0) { echo \"Disponible\"; }",
+                        "Avec $stock = 0, affiche Rupture en utilisant if et else.",
+                        """
+                        <?php
+
+                        $stock = 0;
+                        // Ecris la condition ici
+                        """,
+                        "La condition gere correctement le stock vide.",
+                        "Teste $stock > 0, puis affiche Rupture dans le else.",
+                        45,
+                        4,
+                        [
+                            Required("Utilise if", "if"),
+                            Required("Utilise else", "else"),
+                            Required("Teste le stock", "$stock > 0"),
+                            Output("Contient Rupture", "Rupture")
+                        ],
+                        conceptSummary: "Une condition transforme une valeur booleenne en decision de programme.",
+                        finalCorrection:
+                        """
+                        <?php
+
+                        $stock = 0;
+
+                        if ($stock > 0) {
+                            echo "Disponible";
+                        } else {
+                            echo "Rupture";
+                        }
+                        """),
+                    PhpLesson(
+                        "php-loops",
+                        "Boucles",
+                        "Repeter une action avec une boucle PHP.",
+                        "for repete un bloc un nombre connu de fois. foreach parcourt une liste.",
+                        "<?php\nfor ($i = 1; $i <= 3; $i++) { echo $i; }",
+                        "Utilise une boucle for pour produire Item 1, Item 2 et Item 3.",
+                        """
+                        <?php
+
+                        // Boucle de 1 a 3
+                        """,
+                        "La boucle produit les trois elements attendus.",
+                        "Utilise for, une variable $i et un echo dans la boucle.",
+                        45,
+                        5,
+                        [
+                            Required("Utilise for", "for"),
+                            Required("Utilise $i", "$i"),
+                            Required("Affiche dans la boucle", "echo"),
+                            Output("Contient Item 1", "Item 1"),
+                            Output("Contient Item 3", "Item 3")
+                        ],
+                        conceptSummary: "Une boucle evite de dupliquer les memes instructions.",
+                        finalCorrection:
+                        """
+                        <?php
+
+                        for ($i = 1; $i <= 3; $i++) {
+                            echo "Item " . $i;
+                        }
+                        """),
+                    PhpLesson(
+                        "php-functions",
+                        "Fonctions",
+                        "Isoler une logique reutilisable dans une fonction PHP.",
+                        "Une fonction porte un nom, peut recevoir des parametres et peut retourner une valeur.",
+                        "<?php\nfunction formatName(string $name): string { return strtoupper($name); }",
+                        "Cree formatProduct(string $name, int $price): string et retourne Product: Book - 12.",
+                        """
+                        <?php
+
+                        function formatProduct(string $name, int $price): string
+                        {
+                            // Retourne le texte demande
+                        }
+
+                        echo formatProduct("Book", 12);
+                        """,
+                        "La fonction est typee, appelee et retourne le texte attendu.",
+                        "Garde les parametres types et retourne une chaine concatenee.",
+                        55,
+                        6,
+                        [
+                            Required("Declare une fonction", "function formatProduct"),
+                            Required("Type le nom", "string $name"),
+                            Required("Type le prix", "int $price"),
+                            Required("Retourne une valeur", "return"),
+                            Output("Contient Product: Book - 12", "Product: Book - 12")
+                        ],
+                        conceptSummary: "Une fonction rend une logique nommee, testable et reutilisable.",
+                        finalCorrection:
+                        """
+                        <?php
+
+                        function formatProduct(string $name, int $price): string
+                        {
+                            return "Product: " . $name . " - " . $price;
+                        }
+
+                        echo formatProduct("Book", 12);
+                        """)
+                ]),
+                PhpSymfonyModule(2, "PHP oriente objet", "Classes, objets, proprietes, methodes, constructeurs et encapsulation.",
+                    ["Classes", "Objets", "Proprietes", "Methodes", "Constructeurs", "Encapsulation"]),
+                PhpSymfonyModule(3, "Bases de Symfony", "Structure de projet, routes, controllers, responses, Twig et parametres.",
+                    ["Structure d'un projet Symfony", "Routes", "Controllers", "Responses", "Templates Twig", "Parametres de route"]),
+                PhpSymfonyModule(4, "Formulaires Symfony", "Creation, validation, contraintes, erreurs et traitement de soumission.",
+                    ["Creation de formulaire", "Validation", "Contraintes", "Gestion des erreurs", "Traitement de la soumission"]),
+                PhpSymfonyModule(5, "Doctrine avec Symfony", "Entites, repositories, migrations, relations simples et CRUD Doctrine.",
+                    ["Entites", "Repositories", "Migrations", "Relations simples", "CRUD avec Doctrine"]),
+                PhpSymfonyModule(6, "Architecture Symfony", "Services, injection de dependances, configuration et separation des responsabilites.",
+                    ["Services", "Injection de dependances", "Configuration", "Separation controller / service", "Bonnes pratiques Symfony"]),
+                PhpSymfonyModule(7, "Securite Symfony", "Authentification, utilisateurs, roles, protection des routes et autorisations.",
+                    ["Authentification", "Utilisateurs", "Roles", "Protection des routes", "Autorisations simples"]),
+                PhpSymfonyModule(8, "Projet pratique Symfony", "Mini-application MVC avec routes, controllers, Twig, formulaires, Doctrine, services et securite.",
+                    ["Mini-application MVC", "Routes", "Controllers", "Templates Twig", "Formulaires", "Doctrine", "Services", "Securite simple"]),
+                Chapter("Boss Final PHP / Symfony", "Mini-application Symfony de gestion de produits.", 9, 0,
+                [
+                    PhpLesson(
+                        "php-symfony-boss-final-products",
+                        "Boss Final PHP / Symfony: gestion de produits",
+                        "Construire une mini-application Symfony de gestion de produits.",
+                        "Le Boss Final assemble PHP, POO, routes, controllers, Twig, formulaires, validation, Doctrine, services et securite simple.",
+                        "#[Route('/products')]\nfinal class ProductController extends AbstractController\n{\n}",
+                        "Propose le code d'une mini-application Symfony qui gere des produits: liste, detail, ajout, edition, suppression, validation, service et route protegee.",
+                        """
+                        <?php
+
+                        namespace App\Controller;
+
+                        // Assemble ici les elements attendus du mini-projet Symfony.
+                        """,
+                        "Boss Final PHP / Symfony valide.",
+                        "Ajoute les briques une par une: entite, routes, controller, formulaires, repository, service et securite.",
+                        180,
+                        1,
+                        [
+                            Required("Cree une entite Product", "class Product"),
+                            Required("Utilise Doctrine ORM", "ORM\\Entity"),
+                            Required("Declare des routes", "#[Route"),
+                            Required("Utilise un controller", "AbstractController"),
+                            Required("Affiche une liste", "index"),
+                            Required("Affiche un detail", "show"),
+                            Required("Ajoute un formulaire", "createForm"),
+                            Required("Valide les donnees", "Assert\\"),
+                            Required("Utilise un service", "ProductService"),
+                            Required("Protege une route", "IsGranted")
+                        ],
+                        conceptSummary: "Une application Symfony propre se construit par responsabilites: entite, repository, controller, formulaire, service, templates et securite.",
+                        finalCorrection:
+                        """
+                        <?php
+
+                        namespace App\Controller;
+
+                        use App\Entity\Product;
+                        use App\Form\ProductType;
+                        use App\Service\ProductService;
+                        use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+                        use Symfony\Component\Routing\Attribute\Route;
+                        use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+                        #[Route('/products')]
+                        final class ProductController extends AbstractController
+                        {
+                            public function __construct(private ProductService $products) {}
+
+                            #[Route('', name: 'product_index')]
+                            public function index() {}
+
+                            #[Route('/{id}', name: 'product_show')]
+                            public function show(Product $product) {}
+
+                            #[Route('/new', name: 'product_new')]
+                            #[IsGranted('ROLE_USER')]
+                            public function new() {}
+
+                            #[Route('/{id}/edit', name: 'product_edit')]
+                            public function edit(Product $product) {}
+
+                            #[Route('/{id}/delete', name: 'product_delete')]
+                            public function delete(Product $product) {}
+                        }
+                        """,
+                        isBossFinal: true)
+                ])
+            ]
+        };
+
+    private static Chapter PhpSymfonyModule(int sortOrder, string title, string description, string[] lessonTitles) =>
+        Chapter($"Module {sortOrder} - {title}", description, sortOrder, 0,
+            lessonTitles.Select((lessonTitle, index) => PhpLesson(
+                $"php-symfony-module-{sortOrder}-{Slugify(lessonTitle)}",
+                lessonTitle,
+                $"Comprendre et pratiquer: {lessonTitle}.",
+                $"{lessonTitle} fait partie du socle PHP/Symfony du module. L'exercice valide les mots-cles et structures essentiels sans sortir du cadre PHP/Symfony.",
+                PhpSymfonyExampleFor(lessonTitle),
+                $"Complete le code pour montrer une utilisation correcte de: {lessonTitle}.",
+                PhpSymfonyStarterFor(lessonTitle),
+                "La notion est presente dans un code PHP/Symfony coherent.",
+                "Ajoute les mots-cles attendus et garde le code centre sur Symfony.",
+                45 + index * 5,
+                index + 1,
+                PhpSymfonyTestsFor(lessonTitle),
+                conceptSummary: $"{lessonTitle} est une brique du parcours PHP/Symfony.",
+                finalCorrection: PhpSymfonySolutionFor(lessonTitle))).ToList());
+
+    private static Lesson PhpLesson(
+        string slug,
+        string title,
+        string objective,
+        string explanation,
+        string exampleCode,
+        string exercisePrompt,
+        string starterCode,
+        string successFeedback,
+        string failureFeedback,
+        int xpReward,
+        int sortOrder,
+        List<LessonTest> tests,
+        string conceptSummary = "",
+        string commonMistakes = "",
+        string finalCorrection = "",
+        bool isBossFinal = false) =>
+        Lesson(
+            slug,
+            title,
+            objective,
+            explanation,
+            exampleCode,
+            exercisePrompt,
+            starterCode,
+            successFeedback,
+            failureFeedback,
+            xpReward,
+            sortOrder,
+            tests,
+            conceptSummary,
+            string.IsNullOrWhiteSpace(commonMistakes)
+                ? "Verifie les noms PHP/Symfony demandes, les $, les namespaces, les attributs et les methodes attendues."
+                : commonMistakes,
+            finalCorrection,
+            isBossFinal);
+
+    private static string Slugify(string value) =>
+        value.ToLowerInvariant()
+            .Replace("'", "")
+            .Replace("/", "-")
+            .Replace(" ", "-")
+            .Replace("<", "")
+            .Replace(">", "")
+            .Replace(":", "")
+            .Replace("é", "e");
+
+    private static string PhpSymfonyExampleFor(string lessonTitle) => lessonTitle switch
+    {
+        "Classes" => "<?php\nfinal class Product {}",
+        "Objets" => "<?php\n$product = new Product();",
+        "Proprietes" => "<?php\nprivate string $name;",
+        "Methodes" => "<?php\npublic function getName(): string { return $this->name; }",
+        "Constructeurs" => "<?php\npublic function __construct(private string $name) {}",
+        "Encapsulation" => "<?php\nprivate int $price;\npublic function getPrice(): int { return $this->price; }",
+        "Routes" or "Parametres de route" => "<?php\n#[Route('/products/{id}', name: 'product_show')]",
+        "Controllers" => "<?php\nfinal class ProductController extends AbstractController {}",
+        "Responses" => "<?php\nreturn new Response('OK');",
+        "Templates Twig" => "{{ product.name }}",
+        "Creation de formulaire" or "Traitement de la soumission" => "<?php\n$form = $this->createForm(ProductType::class, $product);",
+        "Validation" or "Contraintes" => "<?php\n#[Assert\\NotBlank]\nprivate string $name;",
+        "Gestion des erreurs" => "{{ form_errors(form.name) }}",
+        "Entites" => "<?php\n#[ORM\\Entity]\nclass Product {}",
+        "Repositories" => "<?php\nfinal class ProductRepository extends ServiceEntityRepository {}",
+        "Migrations" => "<?php\nfinal class Version20260101000000 extends AbstractMigration {}",
+        "Relations simples" => "<?php\n#[ORM\\ManyToOne]\nprivate ?Category $category = null;",
+        "CRUD avec Doctrine" => "<?php\n$entityManager->persist($product);\n$entityManager->flush();",
+        "Services" or "Separation controller / service" => "<?php\nfinal class ProductService {}",
+        "Injection de dependances" => "<?php\npublic function __construct(private ProductService $service) {}",
+        "Configuration" => "services:\n  App\\Service\\ProductService: ~",
+        "Bonnes pratiques Symfony" => "<?php\nfinal readonly class ProductService {}",
+        "Authentification" => "<?php\nclass LoginFormAuthenticator extends AbstractLoginFormAuthenticator {}",
+        "Utilisateurs" => "<?php\nclass User implements UserInterface {}",
+        "Roles" => "<?php\nreturn ['ROLE_USER'];",
+        "Protection des routes" or "Autorisations simples" => "<?php\n#[IsGranted('ROLE_USER')]",
+        _ => "<?php\n#[Route('/products')]\nfinal class ProductController extends AbstractController {}"
+    };
+
+    private static string PhpSymfonyStarterFor(string lessonTitle) =>
+        $"<?php\n\n// Complete une implementation PHP/Symfony pour: {lessonTitle}\n";
+
+    private static string PhpSymfonySolutionFor(string lessonTitle) => lessonTitle switch
+    {
+        "Classes" => "<?php\n\nfinal class Product\n{\n}\n",
+        "Objets" => "<?php\n\n$product = new Product();\n",
+        "Proprietes" => "<?php\n\nfinal class Product\n{\n    private string $name;\n    private int $price;\n}\n",
+        "Methodes" => "<?php\n\nfinal class Product\n{\n    public function getName(): string\n    {\n        return $this->name;\n    }\n}\n",
+        "Constructeurs" => "<?php\n\nfinal class Product\n{\n    public function __construct(private string $name, private int $price) {}\n}\n",
+        "Encapsulation" => "<?php\n\nfinal class Product\n{\n    private int $price;\n\n    public function getPrice(): int\n    {\n        return $this->price;\n    }\n}\n",
+        "Routes" => "<?php\n\n#[Route('/products', name: 'product_index')]\npublic function index(): Response {}\n",
+        "Controllers" => "<?php\n\nfinal class ProductController extends AbstractController\n{\n}\n",
+        "Responses" => "<?php\n\nreturn new Response('OK');\n",
+        "Templates Twig" => "<h1>{{ product.name }}</h1>\n",
+        "Parametres de route" => "<?php\n\n#[Route('/products/{id}', name: 'product_show')]\npublic function show(int $id): Response {}\n",
+        "Creation de formulaire" => "<?php\n\n$form = $this->createForm(ProductType::class, $product);\n",
+        "Validation" => "<?php\n\n#[Assert\\NotBlank]\nprivate string $name;\n",
+        "Contraintes" => "<?php\n\n#[Assert\\Positive]\nprivate int $price;\n",
+        "Gestion des erreurs" => "{{ form_errors(form.name) }}\n",
+        "Traitement de la soumission" => "<?php\n\n$form->handleRequest($request);\nif ($form->isSubmitted() && $form->isValid()) {}\n",
+        "Entites" => "<?php\n\n#[ORM\\Entity]\nclass Product {}\n",
+        "Repositories" => "<?php\n\nfinal class ProductRepository extends ServiceEntityRepository {}\n",
+        "Migrations" => "<?php\n\nfinal class Version20260101000000 extends AbstractMigration {}\n",
+        "Relations simples" => "<?php\n\n#[ORM\\ManyToOne]\nprivate ?Category $category = null;\n",
+        "CRUD avec Doctrine" => "<?php\n\n$entityManager->persist($product);\n$entityManager->flush();\n$entityManager->remove($product);\n",
+        "Services" => "<?php\n\nfinal class ProductService {}\n",
+        "Injection de dependances" => "<?php\n\npublic function __construct(private ProductService $productService) {}\n",
+        "Configuration" => "services:\n  App\\Service\\ProductService: ~\n",
+        "Separation controller / service" => "<?php\n\n$product = $productService->create($data);\n",
+        "Bonnes pratiques Symfony" => "<?php\n\nfinal readonly class ProductService {}\n",
+        "Authentification" => "<?php\n\nclass LoginFormAuthenticator extends AbstractLoginFormAuthenticator {}\n",
+        "Utilisateurs" => "<?php\n\nclass User implements UserInterface {}\n",
+        "Roles" => "<?php\n\nreturn ['ROLE_USER'];\n",
+        "Protection des routes" => "<?php\n\n#[IsGranted('ROLE_USER')]\npublic function account(): Response {}\n",
+        "Autorisations simples" => "<?php\n\n$this->denyAccessUnlessGranted('ROLE_USER');\n",
+        _ => "<?php\n\n#[Route('/products')]\nfinal class ProductController extends AbstractController {}\n"
+    };
+
+    private static List<LessonTest> PhpSymfonyTestsFor(string lessonTitle)
+    {
+        string[] expected = lessonTitle switch
+        {
+            "Classes" => ["class Product"],
+            "Objets" => ["new Product"],
+            "Proprietes" => ["private", "$"],
+            "Methodes" => ["function"],
+            "Constructeurs" => ["__construct"],
+            "Encapsulation" => ["private", "public function"],
+            "Structure d'un projet Symfony" => ["src", "templates"],
+            "Routes" or "Parametres de route" => ["#[Route"],
+            "Controllers" => ["AbstractController"],
+            "Responses" => ["Response"],
+            "Templates Twig" => ["{{", "}}"],
+            "Creation de formulaire" or "Formulaires" => ["createForm"],
+            "Validation" or "Contraintes" => ["Assert\\"],
+            "Gestion des erreurs" => ["form_errors"],
+            "Traitement de la soumission" => ["handleRequest", "isSubmitted", "isValid"],
+            "Entites" => ["ORM\\Entity"],
+            "Repositories" => ["Repository"],
+            "Migrations" => ["AbstractMigration"],
+            "Relations simples" => ["ORM\\ManyToOne"],
+            "CRUD avec Doctrine" or "Doctrine" => ["persist", "flush"],
+            "Services" => ["ProductService"],
+            "Injection de dependances" => ["__construct", "ProductService"],
+            "Configuration" => ["services:"],
+            "Separation controller / service" => ["ProductService"],
+            "Bonnes pratiques Symfony" => ["final"],
+            "Authentification" => ["Authenticator"],
+            "Utilisateurs" => ["UserInterface"],
+            "Roles" => ["ROLE_USER"],
+            "Protection des routes" => ["IsGranted"],
+            "Autorisations simples" => ["denyAccessUnlessGranted"],
+            "Mini-application MVC" => ["#[Route", "AbstractController"],
+            "Securite simple" => ["ROLE_USER"],
+            _ => ["<?php"]
+        };
+
+        return expected.Select((snippet, index) =>
+        {
+            var test = Required($"Contient {snippet}", snippet);
+            test.SortOrder = index + 1;
+            return test;
+        }).ToList();
+    }
+
+
+    private static async Task EnsureIntermediateBossesSeededAsync(AppDbContext db)
+    {
         var courses = await db.Courses
             .Include(course => course.Chapters)
             .ThenInclude(chapter => chapter.Lessons)
@@ -4160,13 +4676,82 @@ public static class SeedData
                 continue;
             }
 
-            chapter.IntermediateBoss = course.Language == "sqlserver" && chapter.SortOrder == 1
+            chapter.IntermediateBoss = course.Language == "php-symfony" && chapter.SortOrder == 1
+                ? PhpModuleOneIntermediateBoss()
+                : course.Language == "sqlserver" && chapter.SortOrder == 1
                 ? SqlModuleOneIntermediateBoss()
                 : course.Language == "csharp" && chapter.SortOrder == 1
                     ? CSharpModuleOneIntermediateBoss()
                     : BuildIntermediateBossFromModule(course, chapter);
         }
     }
+
+    private static IntermediateBoss PhpModuleOneIntermediateBoss() =>
+        new()
+        {
+            Slug = "php-symfony-module-1-intermediate-boss",
+            Title = "Monstre intermediaire - Fondations PHP",
+            Objective = "Consolider syntaxe PHP, variables, types, conditions, boucles et fonctions.",
+            Instructions = "Cree un script PHP simple qui declare des produits, utilise une fonction, parcourt une liste avec une boucle et affiche uniquement les produits en stock.",
+            StarterCode =
+            """
+            <?php
+
+            $products = [
+                ["name" => "Book", "price" => 12, "stock" => 3],
+                ["name" => "Mouse", "price" => 25, "stock" => 0],
+            ];
+
+            function formatProduct(array $product): string
+            {
+                // Retourne Product: Book - 12
+            }
+
+            // Parcours les produits et affiche seulement ceux en stock
+            """,
+            ExpectedResult = "Le script utilise une variable tableau, une fonction, une condition, une boucle et affiche Product: Book - 12.",
+            XpReward = 85,
+            IsRequiredToUnlockNextModule = true,
+            ValidationRules =
+            [
+                BossSnippet("Commence par <?php", "<?php", 1),
+                BossSnippet("Declare $products", "$products", 2),
+                BossSnippet("Declare formatProduct", "function formatProduct", 3),
+                BossSnippet("Type le parametre array", "array $product", 4),
+                BossSnippet("Retourne une chaine", "return", 5),
+                BossSnippet("Utilise une boucle", "foreach", 6),
+                BossSnippet("Utilise une condition", "if", 7),
+                BossSnippet("Teste le stock", "stock", 8),
+                BossSnippet("Affiche le resultat", "echo", 9),
+                BossOutput("Contient Product: Book - 12", "Product: Book - 12", 10)
+            ],
+            Hints =
+            [
+                BossHint("La fonction doit recevoir un produit et construire une chaine avec name et price.", 1),
+                BossHint("La boucle foreach parcourt $products, puis un if filtre les produits dont stock est superieur a 0.", 2),
+                BossHint("Dans le if, appelle formatProduct($product) et affiche son resultat avec echo.", 3)
+            ],
+            Solution =
+            """
+            <?php
+
+            $products = [
+                ["name" => "Book", "price" => 12, "stock" => 3],
+                ["name" => "Mouse", "price" => 25, "stock" => 0],
+            ];
+
+            function formatProduct(array $product): string
+            {
+                return "Product: " . $product["name"] . " - " . $product["price"];
+            }
+
+            foreach ($products as $product) {
+                if ($product["stock"] > 0) {
+                    echo formatProduct($product);
+                }
+            }
+            """
+        };
 
     private static IntermediateBoss CSharpModuleOneIntermediateBoss() =>
         new()

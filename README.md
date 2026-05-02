@@ -1,6 +1,6 @@
 # interactive-learning
 
-`interactive-learning` est une application web interactive pour apprendre C# et SQL avec des cours progressifs, un editeur Monaco, l'execution Roslyn, la correction automatique, des XP, des niveaux, des badges et un Boss Final.
+`interactive-learning` est une application web interactive pour apprendre C#, SQL / SQL Server et PHP / Symfony avec des cours progressifs, un editeur Monaco, des corrections automatiques, des XP, des niveaux, des badges, des Monstres intermediaires et un Boss Final par parcours.
 
 Le nom public du projet est `interactive-learning`. Les dossiers backend conservent encore le nom technique historique `CSharpInteractive.*` pour eviter un renommage de namespace plus large.
 
@@ -25,9 +25,22 @@ TODO.md                         Checklist d'avancement
 
 SQL Server Docker est optionnel. Le projet fonctionne sans lui grace au moteur SQL pedagogique en memoire.
 
+Le parcours PHP / Symfony ne requiert pas de runtime PHP local en v1: les exercices sont valides par criteres statiques pedagogiques cote backend.
+
 ### Lancer le projet
 
-Ouvrir deux terminaux depuis la racine du depot.
+La maniere recommandee est de lancer le backend et le frontend dans deux terminaux separes depuis la racine du depot.
+
+Avant de commencer, verifier que les ports sont libres :
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5000/api/courses
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000
+```
+
+Si une commande retourne `200`, le service correspondant tourne deja.
+
+#### Option A - Lancement local avec le SDK .NET
 
 Terminal 1 - API backend :
 
@@ -57,6 +70,55 @@ Par defaut, le frontend appelle l'API sur `http://localhost:5000/api`. Si l'API 
 NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api npm run dev
 ```
 
+#### Option B - Backend via Docker si `dotnet` n'est pas installe
+
+Utiliser cette option si `dotnet --info` ne fonctionne pas sur la machine, mais que Docker est disponible.
+
+Depuis la racine du depot :
+
+```bash
+docker rm -f interactive-learning-api 2>/dev/null || true
+docker create \
+  --name interactive-learning-api \
+  -w /src/CSharpInteractive.Api \
+  -p 5000:5000 \
+  -e ASPNETCORE_URLS=http://0.0.0.0:5000 \
+  mcr.microsoft.com/dotnet/sdk:8.0 \
+  sh -c 'dotnet restore /src/CSharpInteractive.sln && dotnet run --no-restore'
+docker cp backend/. interactive-learning-api:/src
+docker start interactive-learning-api
+```
+
+Attendre quelques secondes, puis verifier :
+
+```bash
+curl -s http://localhost:5000/api/courses
+```
+
+La reponse doit lister les trois parcours `csharp-foundations`, `sqlserver-foundations` et `php-symfony`.
+
+Dans un deuxieme terminal, lancer le frontend :
+
+```bash
+cd frontend
+npm install
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api npm run dev
+```
+
+Ouvrir ensuite `http://localhost:3000`.
+
+Pour voir les logs du backend Docker :
+
+```bash
+docker logs -f interactive-learning-api
+```
+
+Pour arreter le backend Docker :
+
+```bash
+docker rm -f interactive-learning-api
+```
+
 ### Lancement rapide apres installation
 
 Une fois les dependances restaurees, les commandes quotidiennes sont :
@@ -73,7 +135,7 @@ npm run dev
 
 ## Frontend
 
-Le frontend est une application Next.js situee dans `frontend/`.
+Le frontend est une application Next.js situee dans `frontend/`. Monaco est configure selon le parcours actif: C#, SQL ou PHP.
 
 Commandes utiles :
 
@@ -99,6 +161,16 @@ dotnet run
 L'API expose Swagger en environnement de developpement.
 
 La base SQLite `interactive-learning.db` est creee automatiquement via EF Core `EnsureCreated` au premier demarrage.
+
+## Parcours disponibles
+
+1. C#.
+2. SQL / SQL Server.
+3. PHP / Symfony.
+
+Chaque parcours possede ses modules, lecons, exercices, Monstres intermediaires, badges, progression dans le parcours, XP et contribution au niveau global. Les modules suivants restent verrouilles tant que le Monstre intermediaire du module precedent n'est pas reussi.
+
+Le parcours PHP / Symfony reste strictement centre sur PHP et Symfony. Git, Docker, Jira, PhpStorm, MySQL et NoSQL ne sont pas des modules du parcours. Doctrine est aborde uniquement comme composant de persistance Symfony.
 
 ## SQL Server pedagogique
 
@@ -180,6 +252,14 @@ Si la base SQLite locale existe deja, supprimer `backend/CSharpInteractive.Api/i
 4. Autoriser explicitement les types d'instructions necessaires dans le scenario ou la logique de securite.
 5. Tester la requete en mode moteur pedagogique et, si possible, avec SQL Server Docker.
 
+## Ajouter une lecon PHP / Symfony
+
+1. Ajouter une entree `PhpLesson(...)` dans le chapitre PHP / Symfony concerne dans `SeedData.cs`.
+2. Renseigner titre, objectif, explication, exemple, exercice, starter code, feedback, resume, erreurs frequentes, correction finale masquee et XP.
+3. Ajouter des tests avec `Required`, `Output`, `Count` ou snippets interdits selon le besoin.
+4. Garder le contenu centre sur PHP / Symfony; ne pas ajouter de modules Git, Docker, Jira, PhpStorm, MySQL ou NoSQL.
+5. Pour Symfony, valider les structures attendues: routes, controllers, Twig, formulaires, validation, Doctrine, services ou securite selon la lecon.
+
 ## Politique de securite SQL
 
 La securite SQL est deny-by-default pour les operations dangereuses. `SqlSafetyService` bloque notamment `DROP DATABASE`, `TRUNCATE`, `ALTER SERVER`, l'acces aux tables systeme, les procedures non autorisees et les multi-statements hors exercices controles.
@@ -191,6 +271,8 @@ Les lecons doivent autoriser uniquement les operations necessaires. Les operatio
 L'execution C# utilise Roslyn en memoire avec timeout et capture console. Ce n'est pas une sandbox durcie pour executer du code non fiable en production.
 
 Le parcours SQL bloque les commandes dangereuses et autorise progressivement les lectures, jointures, agregations, modifications controlees, objets SQL pedagogiques et scripts du Boss Final. Pour une utilisation multi-utilisateur, chaque tentative SQL doit rester isolee ou reinitialisee.
+
+Le parcours PHP / Symfony utilise une validation statique pedagogique. Il verifie la presence des structures demandees, mais n'execute pas une application Symfony complete.
 
 ## Ancien prototype Express
 

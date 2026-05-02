@@ -31,6 +31,7 @@ builder.Services.AddScoped<SqlSafetyService>();
 builder.Services.AddScoped<SqlExecutionService>();
 builder.Services.AddScoped<SqlCorrectionService>();
 builder.Services.AddScoped<IntermediateBossService>();
+builder.Services.AddScoped<PhpSymfonyValidationService>();
 builder.Services.AddScoped<ProgressService>();
 builder.Services.AddScoped<UnlockService>();
 

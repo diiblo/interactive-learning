@@ -189,7 +189,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
         ? await apiClient.runIntermediateBoss(intermediateBoss.id, code)
         : lesson!.editorLanguage === "sql"
           ? await apiClient.runSqlLesson(lesson!.id, code)
-          : lesson!.isBossFinal
+          : lesson!.isBossFinal && lesson!.editorLanguage === "csharp"
             ? await apiClient.runBossFinal(code)
             : await apiClient.runLesson(lesson!.id, code);
       setOutput(result.output);
@@ -218,7 +218,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
         ? await apiClient.submitIntermediateBoss(intermediateBoss.id, code)
         : lesson!.editorLanguage === "sql"
           ? await apiClient.submitSqlLesson(lesson!.id, code)
-          : lesson!.isBossFinal
+          : lesson!.isBossFinal && lesson!.editorLanguage === "csharp"
             ? await apiClient.submitBossFinal(code)
             : await apiClient.submitLesson(lesson!.id, code);
       setLastSubmit(result);
@@ -310,7 +310,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
           </div>
 
           <div className="flex min-h-0 flex-col bg-[#0d1117]">
-            {lesson?.isBossFinal && <BossFinalWorkspace />}
+            {lesson?.isBossFinal && lesson.editorLanguage === "csharp" && <BossFinalWorkspace />}
             {lastSubmit?.passed && intermediateBoss ? (
               <div className="border-b border-[var(--color-success)]/40 bg-[#102018] px-4 py-3 text-sm font-semibold text-[var(--color-success)]">
                 Monstre vaincu

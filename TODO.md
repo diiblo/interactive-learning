@@ -125,6 +125,8 @@
 - [x] Ajouter l'endpoint `POST /api/sql/lessons/{lessonId}/reset`.
 - [x] Ajouter les endpoints Boss Final SQL via `GET/POST /api/sql/lessons/{lessonId}`.
 - [x] Ajouter `SqlSafetyService`.
+- [x] Ajouter un parcours PHP / Symfony comme troisieme parcours.
+- [x] Ajouter une validation statique pedagogique PHP / Symfony.
 - [x] Bloquer `DROP DATABASE`.
 - [x] Bloquer `DROP TABLE` hors exercice prevu.
 - [x] Bloquer `TRUNCATE`.
@@ -145,6 +147,45 @@
 - [x] Ajouter `SqlSchemaPanel` cote frontend.
 - [x] Ajouter `SqlSafetyNotice` cote frontend.
 - [x] Ajouter `CourseSwitcher` C# / SQL.
+- [x] Etendre le changement de parcours a C# / SQL / PHP-Symfony.
+
+## Phase 8 - Parcours PHP / Symfony
+
+- [x] Ajouter le cours `php-symfony`.
+- [x] Ajouter la progression PHP / Symfony dans le niveau global.
+- [x] Ajouter les badges propres au parcours PHP / Symfony.
+- [x] Ajouter Monaco en mode PHP.
+- [x] Ajouter la validation automatique PHP / Symfony par criteres statiques.
+- [x] Ajouter les Monstres intermediaires PHP / Symfony.
+- [x] Verrouiller les modules PHP / Symfony via les Monstres intermediaires.
+- [x] Verrouiller le Boss Final PHP / Symfony tant que les modules requis ne sont pas termines.
+
+### Module 1 - Fondations PHP
+
+- [x] Syntaxe PHP.
+- [x] Variables.
+- [x] Types.
+- [x] Conditions.
+- [x] Boucles.
+- [x] Fonctions.
+- [x] Monstre intermediaire: script PHP avec variables, conditions, boucles et fonctions.
+
+### Structure PHP / Symfony ajoutee
+
+- [x] Module 2 - PHP oriente objet.
+- [x] Module 3 - Bases de Symfony.
+- [x] Module 4 - Formulaires Symfony.
+- [x] Module 5 - Doctrine avec Symfony.
+- [x] Module 6 - Architecture Symfony.
+- [x] Module 7 - Securite Symfony.
+- [x] Module 8 - Projet pratique Symfony.
+- [x] Boss Final PHP / Symfony: mini-application de gestion de produits.
+
+### A durcir ensuite
+
+- [ ] Ajouter un runtime PHP optionnel pour executer certains scripts simples.
+- [ ] Ajouter des validations plus fines pour les exercices Symfony avances.
+- [ ] Ajouter un affichage d'indices et solution masquee reutilisable pour toutes les lecons, pas seulement les Monstres intermediaires.
 
 ## Phase 7 - Module SQL 1 complet
 

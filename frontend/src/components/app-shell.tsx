@@ -15,6 +15,8 @@ import type {
   LessonMapItemDto,
   ProfileDto,
   ProgressDto,
+  ReviewItemDto,
+  SkillProgressDto,
   SqlSchemaDto,
   SubmitResultDto,
 } from "@/types/api";
@@ -29,6 +31,8 @@ import { LessonContent } from "./lesson-content";
 import { LessonUnlockCard } from "./lesson-unlock-card";
 import { ProgressHeader } from "./progress-header";
 import { RunConsole } from "./run-console";
+import { ReviewQueue } from "./review-queue";
+import { SkillMap } from "./skill-map";
 import { SqlResultGrid } from "./sql-result-grid";
 import { SqlSafetyNotice } from "./sql-safety-notice";
 import { SqlSchemaPanel } from "./sql-schema-panel";
@@ -39,12 +43,19 @@ type AppShellProps = {
   initialBossFinal?: boolean;
 };
 
+function initialEditorCode(language: string) {
+  return language === "csharp" ? "using System;\n\n// Ecris ton code ici\n" : "";
+}
+
 export function AppShell({ initialLessonId, initialBossFinal = false }: AppShellProps) {
   const [courses, setCourses] = useState<CourseSummaryDto[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [courseMap, setCourseMap] = useState<CourseMapDto | null>(null);
   const [profile, setProfile] = useState<ProfileDto | null>(null);
   const [progress, setProgress] = useState<ProgressDto | null>(null);
+  const [skillProgress, setSkillProgress] = useState<SkillProgressDto[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<ReviewItemDto[]>([]);
+  const reviewSkillIdMap = useRef<Map<string, number>>(new Map());
   const [lesson, setLesson] = useState<LessonDetailDto | null>(null);
   const [intermediateBoss, setIntermediateBoss] = useState<IntermediateBossDetailDto | null>(null);
   const [intermediateBossHints, setIntermediateBossHints] = useState<IntermediateBossHintDto[]>([]);
@@ -71,6 +82,32 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     setProgress(nextProgress);
   }, []);
 
+  const refreshSkillProgress = useCallback(async (courseId?: number | null) => {
+    const id = courseId ?? selectedCourseIdRef.current;
+    const course = coursesRef.current.find((candidate) => candidate.id === id);
+    if (!course) {
+      setSkillProgress([]);
+      reviewSkillIdMap.current = new Map();
+      return;
+    }
+
+    const progress = await apiClient.getSkillProgress(course.language);
+    setSkillProgress(progress);
+    reviewSkillIdMap.current = new Map(progress.map((item) => [item.skillSlug, item.skillId]));
+  }, []);
+
+  const refreshReviewQueue = useCallback(async (courseId?: number | null) => {
+    const id = courseId ?? selectedCourseIdRef.current;
+    const course = coursesRef.current.find((candidate) => candidate.id === id);
+    if (!course) {
+      setReviewQueue([]);
+      return;
+    }
+
+    const due = await apiClient.getDueReviews();
+    setReviewQueue(due.filter((item) => item.courseLanguage === course.language));
+  }, []);
+
   const loadLesson = useCallback(async (item: LessonMapItemDto, courseIdOverride?: number) => {
     if (item.isLocked) {
       return;
@@ -89,7 +126,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     const course = coursesRef.current.find((candidate) => candidate.id === courseId);
     const detail = course?.language === "sqlserver" ? await apiClient.getSqlLesson(item.id) : await apiClient.getLesson(item.id);
     setLesson(detail);
-    setCode(detail.starterCode);
+    setCode(initialEditorCode(detail.editorLanguage));
 
     if (detail.editorLanguage === "sql") {
       setSqlSchema(await apiClient.getSqlSchema());
@@ -115,7 +152,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
 
     const detail = await apiClient.getIntermediateBoss(item.moduleId);
     setIntermediateBoss(detail);
-    setCode(detail.starterCode);
+    setCode(initialEditorCode(detail.editorLanguage));
 
     if (detail.editorLanguage === "sql") {
       setSqlSchema(await apiClient.getSqlSchema());
@@ -130,6 +167,8 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     setSelectedCourseId(courseId);
     setCourseMap(nextMap);
     setProgress(nextProgress);
+    await refreshSkillProgress(courseId);
+    await refreshReviewQueue(courseId);
 
     const initialLesson =
       (preferredLessonId ? findLessonInMap(nextMap, preferredLessonId) : null) ??
@@ -143,7 +182,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
       setIntermediateBoss(null);
       setCode("");
     }
-  }, [loadLesson]);
+  }, [loadLesson, refreshSkillProgress]);
 
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -226,6 +265,8 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
       setSqlColumns([]);
       setSqlRows([]);
       await refreshProgress();
+      await refreshSkillProgress(selectedCourseId);
+      await refreshReviewQueue(selectedCourseId);
       if (selectedCourseId) {
         setCourseMap(await apiClient.getCourseMap(selectedCourseId));
       }
@@ -236,6 +277,22 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
       setError(caught instanceof Error ? caught.message : "Erreur pendant la correction.");
     } finally {
       setIsRunning(false);
+    }
+  };
+
+  const reviewSkill = async (lessonSlug: string | null, skillId?: number) => {
+    if (skillId && skillId > 0) {
+      await apiClient.completeReview(skillId);
+      await refreshSkillProgress(selectedCourseId);
+      await refreshReviewQueue(selectedCourseId);
+    }
+    if (!lessonSlug || !courseMap) {
+      return;
+    }
+
+    const target = courseMap.chapters.flatMap((chapter) => chapter.lessons).find((item) => item.slug === lessonSlug);
+    if (target && !target.isLocked) {
+      await loadLesson(target);
     }
   };
 
@@ -375,6 +432,11 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
               <XpLevelCard profile={profile} />
               <BadgeGrid badges={profile?.badges ?? []} />
             </div>
+            <ReviewQueue
+              reviews={reviewQueue}
+              onReview={(skillSlug, lessonSlug) => void reviewSkill(lessonSlug, reviewSkillIdMap.current.get(skillSlug))}
+            />
+            <SkillMap skills={skillProgress} onReview={(lessonSlug, skillId) => void reviewSkill(lessonSlug, skillId)} />
           </div>
         </section>
       </main>

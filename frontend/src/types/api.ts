@@ -1,4 +1,17 @@
 export type LessonProgressStatus = "Locked" | "Available" | "Started" | "Completed";
+export type SkillProgressStatus = "New" | "Learning" | "Fragile" | "Solid" | "Mastered" | "ReviewDue";
+export type SubmissionErrorCategory =
+  | "SyntaxError"
+  | "MissingRequiredSnippet"
+  | "ForbiddenSnippetUsed"
+  | "WrongOutput"
+  | "WrongLogic"
+  | "EmptyCode"
+  | "CompilationError"
+  | "RuntimeError"
+  | "PartialSolution"
+  | "HardcodedSolution"
+  | "Unknown";
 
 export type BadgeDto = {
   id: number;
@@ -62,6 +75,19 @@ export type CourseMapDto = {
   bossFinal: LessonMapItemDto | null;
 };
 
+export type SkillDto = {
+  id: number;
+  courseLanguage: string;
+  slug: string;
+  name: string;
+  description: string;
+};
+
+export type LessonHintDto = {
+  hintLevel: number;
+  content: string;
+};
+
 export type LessonDetailDto = {
   id: number;
   slug: string;
@@ -80,6 +106,8 @@ export type LessonDetailDto = {
   xpReward: number;
   isBossFinal: boolean;
   status: LessonProgressStatus;
+  hints?: LessonHintDto[];
+  skills?: SkillDto[];
 };
 
 export type IntermediateBossDetailDto = {
@@ -150,6 +178,42 @@ export type TestResultDto = {
   message: string;
 };
 
+export type RelatedSkillDto = {
+  slug: string;
+  name: string;
+  masteryPercent: number;
+  status: SkillProgressStatus;
+};
+
+export type SubmissionFeedbackDto = {
+  isSuccess: boolean;
+  summary: string;
+  whatWentWell: string[];
+  whatIsMissing: string[];
+  errorCategory: SubmissionErrorCategory;
+  progressiveHints: string[];
+  relatedSkills: RelatedSkillDto[];
+  suggestedReviewLessonSlugs: string[];
+};
+
+export type SkillResultDto = {
+  skillSlug: string;
+  skillName: string;
+  scorePercent: number;
+  status: SkillProgressStatus;
+  feedback: string;
+};
+
+export type BossResultDto = {
+  isSuccess: boolean;
+  scorePercent: number;
+  summary: string;
+  skillResults: SkillResultDto[];
+  strengths: string[];
+  weaknesses: string[];
+  suggestedReviews: string[];
+};
+
 export type SubmitResultDto = {
   passed: boolean;
   output: string;
@@ -159,6 +223,8 @@ export type SubmitResultDto = {
   newLevel: number;
   unlockedLessonIds: number[];
   earnedBadges: BadgeDto[];
+  structuredFeedback?: SubmissionFeedbackDto | null;
+  bossResult?: BossResultDto | null;
 };
 
 export type ProgressDto = {
@@ -167,4 +233,29 @@ export type ProgressDto = {
   totalLessons: number;
   completedLessonIds: number[];
   availableLessonIds: number[];
+};
+
+export type SkillProgressDto = {
+  skillId: number;
+  courseLanguage: string;
+  skillSlug: string;
+  skillName: string;
+  description: string;
+  masteryPercent: number;
+  successfulAttempts: number;
+  failedAttempts: number;
+  nextReviewAt: string | null;
+  status: SkillProgressStatus;
+  isReviewDue: boolean;
+  reviewLessonSlug: string | null;
+};
+
+export type ReviewItemDto = {
+  skillSlug: string;
+  skillName: string;
+  courseLanguage: string;
+  masteryPercent: number;
+  status: SkillProgressStatus;
+  nextReviewAt: string | null;
+  suggestedLessonSlugs: string[];
 };

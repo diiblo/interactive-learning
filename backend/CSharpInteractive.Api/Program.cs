@@ -34,6 +34,12 @@ builder.Services.AddScoped<IntermediateBossService>();
 builder.Services.AddScoped<PhpSymfonyValidationService>();
 builder.Services.AddScoped<ProgressService>();
 builder.Services.AddScoped<UnlockService>();
+builder.Services.AddScoped<CourseCatalogService>();
+builder.Services.AddScoped<SkillProgressService>();
+builder.Services.AddScoped<LearningLanguageService>();
+builder.Services.AddScoped<ILearningLanguageHandler, CSharpLearningLanguageHandler>();
+builder.Services.AddScoped<ILearningLanguageHandler, SqlServerLearningLanguageHandler>();
+builder.Services.AddScoped<ILearningLanguageHandler, PhpSymfonyLearningLanguageHandler>();
 
 var app = builder.Build();
 
@@ -111,7 +117,58 @@ using (var scope = app.Services.CreateScope())
         );
         CREATE INDEX IF NOT EXISTS "IX_IntermediateBossProgress_IntermediateBossId" ON "IntermediateBossProgress" ("IntermediateBossId");
         CREATE UNIQUE INDEX IF NOT EXISTS "IX_IntermediateBossProgress_UserProfileId_IntermediateBossId" ON "IntermediateBossProgress" ("UserProfileId", "IntermediateBossId");
+
+        CREATE TABLE IF NOT EXISTS "Skills" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_Skills" PRIMARY KEY AUTOINCREMENT,
+            "CourseLanguage" TEXT NOT NULL,
+            "Slug" TEXT NOT NULL,
+            "Name" TEXT NOT NULL,
+            "Description" TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_Skills_Slug" ON "Skills" ("Slug");
+
+        CREATE TABLE IF NOT EXISTS "LessonSkills" (
+            "LessonId" INTEGER NOT NULL,
+            "SkillId" INTEGER NOT NULL,
+            "Weight" INTEGER NOT NULL,
+            CONSTRAINT "PK_LessonSkills" PRIMARY KEY ("LessonId", "SkillId"),
+            CONSTRAINT "FK_LessonSkills_Lessons_LessonId" FOREIGN KEY ("LessonId") REFERENCES "Lessons" ("Id") ON DELETE CASCADE,
+            CONSTRAINT "FK_LessonSkills_Skills_SkillId" FOREIGN KEY ("SkillId") REFERENCES "Skills" ("Id") ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS "IX_LessonSkills_SkillId" ON "LessonSkills" ("SkillId");
+
+        CREATE TABLE IF NOT EXISTS "LessonHints" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_LessonHints" PRIMARY KEY AUTOINCREMENT,
+            "LessonId" INTEGER NOT NULL,
+            "HintLevel" INTEGER NOT NULL,
+            "Content" TEXT NOT NULL,
+            CONSTRAINT "FK_LessonHints_Lessons_LessonId" FOREIGN KEY ("LessonId") REFERENCES "Lessons" ("Id") ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS "IX_LessonHints_LessonId" ON "LessonHints" ("LessonId");
+
+
+        CREATE TABLE IF NOT EXISTS "UserSkillProgress" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_UserSkillProgress" PRIMARY KEY AUTOINCREMENT,
+            "UserProfileId" INTEGER NOT NULL,
+            "SkillId" INTEGER NOT NULL,
+            "MasteryPercent" INTEGER NOT NULL,
+            "SuccessfulAttempts" INTEGER NOT NULL,
+            "FailedAttempts" INTEGER NOT NULL,
+            "NextReviewAt" TEXT NULL,
+            "Status" INTEGER NOT NULL,
+            CONSTRAINT "FK_UserSkillProgress_Skills_SkillId" FOREIGN KEY ("SkillId") REFERENCES "Skills" ("Id") ON DELETE CASCADE,
+            CONSTRAINT "FK_UserSkillProgress_UserProfiles_UserProfileId" FOREIGN KEY ("UserProfileId") REFERENCES "UserProfiles" ("Id") ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS "IX_UserSkillProgress_SkillId" ON "UserSkillProgress" ("SkillId");
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_UserSkillProgress_UserProfileId_SkillId" ON "UserSkillProgress" ("UserProfileId", "SkillId");
         """);
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Badges\" ADD COLUMN \"RuleCourseLanguage\" TEXT NULL;");
+    }
+    catch (Exception)
+    {
+    }
     await SeedData.EnsureSeededAsync(db);
 }
 

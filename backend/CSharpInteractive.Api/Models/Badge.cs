@@ -4,7 +4,9 @@ public enum BadgeRuleType
 {
     CompleteLessons = 1,
     TotalXp = 2,
-    CompleteBossFinal = 3
+    CompleteBossFinal = 3,
+    CompleteLessonInCourse = 4,
+    CompleteBossFinalInCourse = 5
 }
 
 public sealed class Badge
@@ -16,5 +18,6 @@ public sealed class Badge
     public string IconName { get; set; } = "";
     public BadgeRuleType RuleType { get; set; }
     public int RuleValue { get; set; }
+    public string? RuleCourseLanguage { get; set; }
     public List<UserBadge> UserBadges { get; set; } = [];
 }

@@ -12,6 +12,7 @@ namespace CSharpInteractive.Api.Controllers;
 public sealed class IntermediateBossesController(
     AppDbContext db,
     IntermediateBossService intermediateBossService,
+    LearningLanguageService languageService,
     ProgressService progressService) : ControllerBase
 {
     [HttpGet("modules/{moduleId:int}")]
@@ -129,12 +130,7 @@ public sealed class IntermediateBossesController(
             boss.ModuleId,
             boss.Slug,
             boss.Title,
-            boss.Module?.Course?.Language switch
-            {
-                "sqlserver" => "sql",
-                "php-symfony" => "php",
-                _ => "csharp"
-            },
+            languageService.GetRequiredHandler(boss).EditorLanguage,
             boss.Objective,
             boss.Instructions,
             boss.StarterCode,

@@ -33,7 +33,9 @@ public sealed record LessonDetailDto(
     string FinalCorrection,
     int XpReward,
     bool IsBossFinal,
-    LessonProgressStatus Status);
+    LessonProgressStatus Status,
+    IReadOnlyList<LessonHintDto>? Hints = null,
+    IReadOnlyList<SkillDto>? Skills = null);
 
 public sealed record IntermediateBossMapItemDto(
     int Id,

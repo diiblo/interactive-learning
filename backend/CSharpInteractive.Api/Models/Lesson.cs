@@ -22,4 +22,6 @@ public sealed class Lesson
     public bool IsBossPrerequisite { get; set; } = true;
     public bool IsBossFinal { get; set; }
     public List<LessonTest> Tests { get; set; } = [];
+    public List<LessonSkill> LessonSkills { get; set; } = [];
+    public List<LessonHint> Hints { get; set; } = [];
 }

@@ -8,6 +8,8 @@ import type {
   LessonDetailDto,
   ProfileDto,
   ProgressDto,
+  ReviewItemDto,
+  SkillProgressDto,
   SqlSchemaDto,
   SubmitResultDto,
 } from "@/types/api";
@@ -27,12 +29,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`API error ${response.status} for ${path}`);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
 export const apiClient = {
   getProfile: () => request<ProfileDto>("/profile"),
   getProgress: () => request<ProgressDto>("/progress"),
+  getSkillProgress: (courseLanguage?: string) =>
+    request<SkillProgressDto[]>(courseLanguage ? `/skills/progress/${courseLanguage}` : "/skills/progress"),
+  getDueReviews: () => request<ReviewItemDto[]>("/reviews/due"),
+  completeReview: (skillId: number) =>
+    request<void>("/progress/review-completed", {
+      method: "POST",
+      body: JSON.stringify({ skillId }),
+    }),
   getCourses: () => request<CourseSummaryDto[]>("/courses"),
   getCourseMap: (courseId: number) => request<CourseMapDto>(`/courses/${courseId}/map`),
   getLesson: (lessonId: number) => request<LessonDetailDto>(`/lessons/${lessonId}`),

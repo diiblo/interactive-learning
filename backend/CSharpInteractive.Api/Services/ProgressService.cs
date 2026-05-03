@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CSharpInteractive.Api.Services;
 
-public sealed class ProgressService(AppDbContext db, UnlockService unlockService)
+public sealed class ProgressService(AppDbContext db, UnlockService unlockService, SkillProgressService skillProgressService)
 {
     public async Task<UserProfile> GetProfileAsync()
     {
@@ -29,7 +29,14 @@ public sealed class ProgressService(AppDbContext db, UnlockService unlockService
 
     public int CalculateLevel(int totalXp) => Math.Max(1, totalXp / 100 + 1);
 
-    public async Task<SubmitResultDto> CompleteLessonAsync(UserProfile profile, Lesson lesson, string code, string output, IReadOnlyList<TestResultDto> tests, bool passed)
+    public async Task<SubmitResultDto> CompleteLessonAsync(
+        UserProfile profile,
+        Lesson lesson,
+        string code,
+        string output,
+        IReadOnlyList<TestResultDto> tests,
+        bool passed,
+        ExecutionResultDto? execution = null)
     {
         var progress = await db.LessonProgress.FirstOrDefaultAsync(item => item.UserProfileId == profile.Id && item.LessonId == lesson.Id);
         if (progress is null)
@@ -63,8 +70,13 @@ public sealed class ProgressService(AppDbContext db, UnlockService unlockService
         }
 
         await db.SaveChangesAsync();
+        var structuredFeedback = await skillProgressService.UpdateAfterLessonSubmissionAsync(profile, lesson, tests, passed, execution ?? new ExecutionResultDto(passed, output, [], 0), code);
         var unlocked = passed ? await unlockService.RefreshUnlocksAsync(profile) : [];
         var earnedBadges = passed ? await AwardBadgesAsync(profile, lesson) : [];
+
+        var bossResult = lesson.IsBossFinal
+            ? await skillProgressService.BuildLessonBossResultAsync(profile, lesson, tests, passed)
+            : null;
 
         return new SubmitResultDto(
             passed,
@@ -74,7 +86,9 @@ public sealed class ProgressService(AppDbContext db, UnlockService unlockService
             xpEarned,
             profile.Level,
             unlocked,
-            earnedBadges);
+            earnedBadges,
+            structuredFeedback,
+            bossResult);
     }
 
     public async Task<ProgressDto> GetProgressAsync()
@@ -116,17 +130,47 @@ public sealed class ProgressService(AppDbContext db, UnlockService unlockService
     private async Task<IReadOnlyList<BadgeDto>> AwardBadgesAsync(UserProfile profile, Lesson lesson)
     {
         var completedLessons = await db.LessonProgress.CountAsync(item => item.UserProfileId == profile.Id && item.Status == LessonProgressStatus.Completed);
+        var lessonLanguage = lesson.Chapter?.Course?.Language;
+        var completedLessonsByLanguage = lessonLanguage is null
+            ? 0
+            : await db.LessonProgress
+                .Include(item => item.Lesson)
+                .ThenInclude(item => item!.Chapter)
+                .ThenInclude(item => item!.Course)
+                .CountAsync(item => item.UserProfileId == profile.Id
+                                    && item.Status == LessonProgressStatus.Completed
+                                    && item.Lesson!.Chapter!.Course!.Language == lessonLanguage);
+        var courseXp = lessonLanguage is null
+            ? 0
+            : await db.LessonProgress
+                .Include(item => item.Lesson)
+                .ThenInclude(item => item!.Chapter)
+                .ThenInclude(item => item!.Course)
+                .Where(item => item.UserProfileId == profile.Id
+                               && item.Status == LessonProgressStatus.Completed
+                               && item.Lesson!.Chapter!.Course!.Language == lessonLanguage)
+                .SumAsync(item => item.EarnedXp);
         var existingBadgeIds = await db.UserBadges.Where(item => item.UserProfileId == profile.Id).Select(item => item.BadgeId).ToListAsync();
         var badges = await db.Badges.Where(item => !existingBadgeIds.Contains(item.Id)).ToListAsync();
         var earned = new List<Badge>();
 
         foreach (var badge in badges)
         {
+            if (!string.IsNullOrWhiteSpace(badge.RuleCourseLanguage)
+                && !string.Equals(badge.RuleCourseLanguage, lessonLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var matches = badge.RuleType switch
             {
                 BadgeRuleType.CompleteLessons => completedLessons >= badge.RuleValue,
-                BadgeRuleType.TotalXp => profile.TotalXp >= badge.RuleValue,
+                BadgeRuleType.TotalXp => string.IsNullOrWhiteSpace(badge.RuleCourseLanguage)
+                    ? profile.TotalXp >= badge.RuleValue
+                    : courseXp >= badge.RuleValue,
                 BadgeRuleType.CompleteBossFinal => lesson.IsBossFinal,
+                BadgeRuleType.CompleteLessonInCourse => completedLessonsByLanguage >= badge.RuleValue,
+                BadgeRuleType.CompleteBossFinalInCourse => lesson.IsBossFinal && !string.IsNullOrWhiteSpace(lessonLanguage),
                 _ => false
             };
 

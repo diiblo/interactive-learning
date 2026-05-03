@@ -8,7 +8,7 @@ public sealed class SqlCorrectionService(SqlExecutionService executionService)
     public async Task<(ExecutionResultDto Execution, IReadOnlyList<TestResultDto> Tests, bool Passed)> SubmitAsync(Lesson lesson, string query)
     {
         var execution = await executionService.ExecuteQueryAsync(query);
-        var executionDto = new ExecutionResultDto(execution.Success, execution.Output, execution.Diagnostics, execution.DurationMs);
+        var executionDto = new ExecutionResultDto(execution.Success, execution.Output, execution.Diagnostics, execution.DurationMs, execution.Columns, execution.Rows);
         var results = new List<TestResultDto>();
 
         if (!execution.Success)

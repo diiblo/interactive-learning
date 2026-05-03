@@ -12,7 +12,7 @@ namespace CSharpInteractive.Api.Controllers;
 public sealed class SqlLessonsController(
     AppDbContext db,
     SqlExecutionService executionService,
-    SqlCorrectionService correctionService,
+    LearningLanguageService languageService,
     ProgressService progressService) : ControllerBase
 {
     [HttpGet("schema")]
@@ -34,7 +34,7 @@ public sealed class SqlLessonsController(
     }
 
     [HttpPost("{lessonId:int}/run")]
-    public async Task<ActionResult<SqlExecutionResultDto>> Run(int lessonId, CodeRequest request)
+    public async Task<ActionResult<ExecutionResultDto>> Run(int lessonId, CodeRequest request)
     {
         var access = await GetAccessibleSqlLessonAsync(lessonId);
         if (access.Error is not null)
@@ -42,8 +42,7 @@ public sealed class SqlLessonsController(
             return access.Error;
         }
 
-        var result = await executionService.ExecuteQueryAsync(request.Code);
-        return new SqlExecutionResultDto(result.Success, result.Output, result.Diagnostics, result.DurationMs, result.Columns, result.Rows);
+        return await languageService.GetRequiredHandler(access.Lesson!).RunAsync(request.Code);
     }
 
     [HttpPost("{lessonId:int}/submit")]
@@ -57,8 +56,8 @@ public sealed class SqlLessonsController(
 
         var profile = await progressService.GetProfileAsync();
         var lesson = access.Lesson!;
-        var correction = await correctionService.SubmitAsync(lesson, request.Code);
-        return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed);
+        var correction = await languageService.GetRequiredHandler(lesson).SubmitAsync(lesson, request.Code);
+        return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed, correction.Execution);
     }
 
     [HttpPost("{lessonId:int}/reset")]
@@ -71,6 +70,9 @@ public sealed class SqlLessonsController(
             .Include(lesson => lesson.Chapter)
             .ThenInclude(chapter => chapter!.Course)
             .Include(lesson => lesson.Tests)
+            .Include(lesson => lesson.Hints)
+            .Include(lesson => lesson.LessonSkills)
+            .ThenInclude(item => item.Skill)
             .FirstOrDefaultAsync(lesson => lesson.Id == lessonId && lesson.Chapter!.Course!.Language == "sqlserver");
 
         if (lesson is null)
@@ -102,8 +104,13 @@ public sealed class SqlLessonsController(
             lesson.StarterCode,
             lesson.SuccessFeedback,
             lesson.FailureFeedback,
-            lesson.FinalCorrection,
+            "",
             lesson.XpReward,
             lesson.IsBossFinal,
-            status);
+            status,
+            lesson.Hints.OrderBy(hint => hint.HintLevel).Select(hint => new LessonHintDto(hint.HintLevel, hint.Content)).ToList(),
+            lesson.LessonSkills
+                .Where(item => item.Skill is not null)
+                .Select(item => new SkillDto(item.Skill!.Id, item.Skill.CourseLanguage, item.Skill.Slug, item.Skill.Name, item.Skill.Description))
+                .ToList());
 }

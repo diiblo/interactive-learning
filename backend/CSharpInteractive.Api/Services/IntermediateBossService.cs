@@ -7,27 +7,13 @@ namespace CSharpInteractive.Api.Services;
 
 public sealed class IntermediateBossService(
     AppDbContext db,
-    RoslynExecutionService roslynExecutionService,
-    SqlExecutionService sqlExecutionService,
-    PhpSymfonyValidationService phpSymfonyValidationService,
+    LearningLanguageService languageService,
     ProgressService progressService,
-    UnlockService unlockService)
+    UnlockService unlockService,
+    SkillProgressService skillProgressService)
 {
-    public async Task<ExecutionResultDto> RunAsync(IntermediateBoss boss, string code)
-    {
-        if (IsSqlBoss(boss))
-        {
-            var result = await sqlExecutionService.ExecuteQueryAsync(code);
-            return new ExecutionResultDto(result.Success, result.Output, result.Diagnostics, result.DurationMs, result.Columns, result.Rows);
-        }
-
-        if (IsPhpSymfonyBoss(boss))
-        {
-            return await phpSymfonyValidationService.ValidateAsync(code);
-        }
-
-        return await roslynExecutionService.ExecuteAsync(code);
-    }
+    public Task<ExecutionResultDto> RunAsync(IntermediateBoss boss, string code) =>
+        languageService.GetRequiredHandler(boss).RunAsync(code);
 
     public async Task<SubmitResultDto> SubmitAsync(UserProfile profile, IntermediateBoss boss, string code)
     {
@@ -37,11 +23,7 @@ public sealed class IntermediateBossService(
         if (!execution.Success)
         {
             results.Add(new TestResultDto(
-                IsSqlBoss(boss)
-                    ? "Syntaxe et securite SQL"
-                    : IsPhpSymfonyBoss(boss)
-                        ? "Validation statique PHP/Symfony"
-                        : "Compilation et execution",
+                $"{languageService.GetRequiredHandler(boss).EditorLanguage} execution",
                 false,
                 string.Join("\n", execution.Diagnostics)));
         }
@@ -49,7 +31,7 @@ public sealed class IntermediateBossService(
         {
             foreach (var rule in boss.ValidationRules.OrderBy(rule => rule.SortOrder).ThenBy(rule => rule.Id))
             {
-                results.Add(await EvaluateRuleAsync(rule, code, execution));
+                results.Add(await languageService.GetRequiredHandler(boss).EvaluateBossRuleAsync(rule, code, execution));
             }
         }
 
@@ -88,8 +70,9 @@ public sealed class IntermediateBossService(
         var feedback = passed
             ? "Monstre vaincu. Le module suivant peut maintenant etre deverrouille."
             : "Le monstre resiste encore. Corrige les erreurs indiquees, puis retente.";
+        var bossResult = await skillProgressService.BuildBossResultAsync(profile, boss, results, passed);
 
-        return new SubmitResultDto(passed, execution.Output, results, feedback, xpEarned, profile.Level, unlocked, []);
+        return new SubmitResultDto(passed, execution.Output, results, feedback, xpEarned, profile.Level, unlocked, [], BossResult: bossResult);
     }
 
     public async Task<IntermediateBossHintResultDto> RevealNextHintAsync(UserProfile profile, IntermediateBoss boss)
@@ -138,115 +121,4 @@ public sealed class IntermediateBossService(
         return progress;
     }
 
-    private async Task<TestResultDto> EvaluateRuleAsync(IntermediateBossValidationRule rule, string code, ExecutionResultDto execution)
-    {
-        if (execution.Columns is not null && execution.Rows is not null)
-        {
-            return EvaluateSqlRule(rule, code, execution);
-        }
-
-        if (rule.IntermediateBoss?.Module?.Course?.Language == "php-symfony")
-        {
-            return phpSymfonyValidationService.Evaluate(rule, code);
-        }
-
-        return rule.TestType switch
-        {
-            LessonTestType.ExpectedOutput => Contains(execution.Output, rule.ExpectedOutput)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"La sortie attendue doit contenir: {rule.ExpectedOutput}"),
-            LessonTestType.RequiredSnippet => Contains(code, rule.RequiredSnippet)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"Le code doit contenir: {rule.RequiredSnippet}"),
-            LessonTestType.MinSnippetCount => CountOccurrences(code, rule.RequiredSnippet) >= (rule.MinCount ?? 1)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"Le code doit contenir au moins {rule.MinCount ?? 1} occurrences de: {rule.RequiredSnippet}"),
-            LessonTestType.HiddenCode => await EvaluateHiddenCodeAsync(rule, code),
-            _ => Fail(rule.Name, "Type de validation inconnu pour ce monstre.")
-        };
-    }
-
-    private async Task<TestResultDto> EvaluateHiddenCodeAsync(IntermediateBossValidationRule rule, string code)
-    {
-        if (string.IsNullOrWhiteSpace(rule.HiddenCode))
-        {
-            return Fail(rule.Name, "La validation cachee ne contient aucun code a executer.");
-        }
-
-        var hiddenExecution = await roslynExecutionService.ExecuteAsync($"{code}\n{rule.HiddenCode}");
-        if (!hiddenExecution.Success)
-        {
-            return Fail(rule.Name, string.Join("\n", hiddenExecution.Diagnostics));
-        }
-
-        return string.IsNullOrWhiteSpace(rule.ExpectedOutput) || Contains(hiddenExecution.Output, rule.ExpectedOutput)
-            ? Pass(rule.Name)
-            : Fail(rule.Name, $"La sortie du test cache doit contenir: {rule.ExpectedOutput}");
-    }
-
-    private static TestResultDto EvaluateSqlRule(IntermediateBossValidationRule rule, string query, ExecutionResultDto execution)
-    {
-        return rule.TestType switch
-        {
-            LessonTestType.ExpectedOutput => Contains(execution.Output, rule.ExpectedOutput)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"Le resultat attendu doit contenir: {rule.ExpectedOutput}"),
-            LessonTestType.RequiredSnippet => Contains(query, rule.RequiredSnippet)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"La requete doit contenir: {rule.RequiredSnippet}"),
-            LessonTestType.MinSnippetCount => CountOccurrences(query, rule.RequiredSnippet) >= (rule.MinCount ?? 1)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"La requete doit contenir au moins {rule.MinCount ?? 1} occurrences de: {rule.RequiredSnippet}"),
-            LessonTestType.SqlExpectedColumns => ColumnsMatch(execution.Columns ?? [], rule.ExpectedColumns)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"Les colonnes attendues sont: {rule.ExpectedColumns}"),
-            LessonTestType.SqlExpectedRowCount => (execution.Rows?.Count ?? -1) == (rule.ExpectedRowCount ?? -1)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"Le nombre de lignes attendu est: {rule.ExpectedRowCount}"),
-            LessonTestType.SqlForbiddenSnippet => !Contains(query, rule.RequiredSnippet)
-                ? Pass(rule.Name)
-                : Fail(rule.Name, $"La requete ne doit pas contenir: {rule.RequiredSnippet}"),
-            _ => Fail(rule.Name, "Type de validation SQL inconnu pour ce monstre.")
-        };
-    }
-
-    private static bool IsSqlBoss(IntermediateBoss boss) => boss.Module?.Course?.Language == "sqlserver";
-
-    private static bool IsPhpSymfonyBoss(IntermediateBoss boss) => boss.Module?.Course?.Language == "php-symfony";
-
-    private static bool Contains(string source, string? expected) =>
-        !string.IsNullOrWhiteSpace(expected) && source.Contains(expected, StringComparison.OrdinalIgnoreCase);
-
-    private static int CountOccurrences(string source, string? expected)
-    {
-        if (string.IsNullOrWhiteSpace(expected))
-        {
-            return 0;
-        }
-
-        var count = 0;
-        var index = 0;
-        while ((index = source.IndexOf(expected, index, StringComparison.OrdinalIgnoreCase)) >= 0)
-        {
-            count++;
-            index += expected.Length;
-        }
-
-        return count;
-    }
-
-    private static bool ColumnsMatch(IReadOnlyList<string> actual, string? expected)
-    {
-        if (string.IsNullOrWhiteSpace(expected))
-        {
-            return false;
-        }
-
-        var expectedColumns = expected.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return actual.Count == expectedColumns.Length && actual.Zip(expectedColumns).All(pair => string.Equals(pair.First, pair.Second, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static TestResultDto Pass(string name) => new(name, true, "OK");
-
-    private static TestResultDto Fail(string name, string message) => new(name, false, message);
 }

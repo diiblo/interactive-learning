@@ -11,8 +11,7 @@ namespace CSharpInteractive.Api.Controllers;
 [Route("api/boss-final")]
 public sealed class BossFinalController(
     AppDbContext db,
-    RoslynExecutionService executionService,
-    LessonCorrectionService correctionService,
+    LearningLanguageService languageService,
     ProgressService progressService) : ControllerBase
 {
     [HttpPost("run")]
@@ -24,7 +23,7 @@ public sealed class BossFinalController(
             return access.Error;
         }
 
-        return await executionService.ExecuteAsync(request.Code);
+        return await languageService.GetRequiredHandler(access.Lesson!).RunAsync(request.Code);
     }
 
     [HttpPost("submit")]
@@ -38,8 +37,8 @@ public sealed class BossFinalController(
 
         var profile = await progressService.GetProfileAsync();
         var lesson = access.Lesson!;
-        var correction = await correctionService.SubmitAsync(lesson, request.Code);
-        return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed);
+        var correction = await languageService.GetRequiredHandler(lesson).SubmitAsync(lesson, request.Code);
+        return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed, correction.Execution);
     }
 
     private async Task<(Lesson? Lesson, ActionResult? Error)> GetAccessibleBossAsync()

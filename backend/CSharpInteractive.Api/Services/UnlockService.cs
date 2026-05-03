@@ -1,5 +1,6 @@
 using CSharpInteractive.Api.Data;
 using CSharpInteractive.Api.Models;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace CSharpInteractive.Api.Services;
@@ -129,7 +130,22 @@ public sealed class UnlockService(AppDbContext db)
             }
         }
 
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqliteException { SqliteErrorCode: 19 })
+        {
+            foreach (var entry in db.ChangeTracker.Entries()
+                         .Where(entry => entry.State == EntityState.Added &&
+                                         (entry.Entity is LessonProgress || entry.Entity is IntermediateBossProgress)))
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            return [];
+        }
+
         return unlocked;
     }
 }

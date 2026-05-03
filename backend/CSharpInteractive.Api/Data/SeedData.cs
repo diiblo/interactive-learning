@@ -4119,9 +4119,12 @@ public static class SeedData
                 new Badge { Slug = "first-run", Name = "Premier run", Description = "Terminer une premiere lecon.", IconName = "play", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 },
                 new Badge { Slug = "hundred-xp", Name = "100 XP", Description = "Atteindre 100 points d'experience.", IconName = "star", RuleType = BadgeRuleType.TotalXp, RuleValue = 100 },
                 new Badge { Slug = "boss-slayer", Name = "Boss Final", Description = "Reussir le mini-projet final.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinal, RuleValue = 1 },
-                new Badge { Slug = "sql-first-select", Name = "Premier SELECT", Description = "Terminer une premiere lecon SQL.", IconName = "database", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 },
-                new Badge { Slug = "php-first-script", Name = "Premier script PHP", Description = "Terminer une premiere lecon PHP/Symfony.", IconName = "code", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 },
-                new Badge { Slug = "symfony-product-builder", Name = "Produit Symfony", Description = "Avancer dans le parcours PHP/Symfony.", IconName = "box", RuleType = BadgeRuleType.TotalXp, RuleValue = 250 });
+                new Badge { Slug = "sql-first-select", Name = "Premier SELECT", Description = "Terminer une premiere lecon SQL.", IconName = "database", RuleType = BadgeRuleType.CompleteLessonInCourse, RuleValue = 1, RuleCourseLanguage = "sqlserver" },
+                new Badge { Slug = "php-first-script", Name = "Premier script PHP", Description = "Terminer une premiere lecon PHP/Symfony.", IconName = "code", RuleType = BadgeRuleType.CompleteLessonInCourse, RuleValue = 1, RuleCourseLanguage = "php-symfony" },
+                new Badge { Slug = "symfony-product-builder", Name = "Produit Symfony", Description = "Avancer dans le parcours PHP/Symfony.", IconName = "box", RuleType = BadgeRuleType.TotalXp, RuleValue = 250, RuleCourseLanguage = "php-symfony" },
+                new Badge { Slug = "csharp-boss-final", Name = "Boss Final C#", Description = "Reussir le boss final C#.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinalInCourse, RuleValue = 1, RuleCourseLanguage = "csharp" },
+                new Badge { Slug = "sql-boss-final", Name = "Boss Final SQL", Description = "Reussir le boss final SQL.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinalInCourse, RuleValue = 1, RuleCourseLanguage = "sqlserver" },
+                new Badge { Slug = "php-boss-final", Name = "Boss Final PHP", Description = "Reussir le boss final PHP/Symfony.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinalInCourse, RuleValue = 1, RuleCourseLanguage = "php-symfony" });
         }
 
         if (!seededFullCatalog)
@@ -4130,6 +4133,8 @@ public static class SeedData
         }
 
         await EnsureIntermediateBossesSeededAsync(db);
+        await db.SaveChangesAsync();
+        await EnsureLearningMetadataSeededAsync(db);
 
         if (!await db.UserProfiles.AnyAsync())
         {
@@ -4138,6 +4143,1615 @@ public static class SeedData
 
         await db.SaveChangesAsync();
     }
+
+    private static async Task EnsureLearningMetadataSeededAsync(AppDbContext db)
+    {
+        var skillDefinitions = new (string Language, string Slug, string Name, string Description)[]
+        {
+            ("csharp", "csharp-variables", "Variables C#", "Declarer, initialiser et reutiliser des variables."),
+            ("csharp", "csharp-types", "Types C#", "Choisir les types de base adaptes aux donnees."),
+            ("csharp", "csharp-console-output", "Sortie console C#", "Afficher des informations avec Console.WriteLine."),
+            ("csharp", "csharp-conditions", "Conditions C#", "Controler le flux avec if, else et switch."),
+            ("csharp", "csharp-loops", "Boucles C#", "Repeter des traitements avec for, while et foreach."),
+            ("csharp", "csharp-methods", "Methodes C#", "Decouper le code en actions reutilisables."),
+            ("csharp", "csharp-classes", "Classes C#", "Modeliser des objets avec classes, proprietes et constructeurs."),
+            ("csharp", "csharp-lists", "Listes C#", "Manipuler des collections ordonnees."),
+            ("csharp", "csharp-dictionaries", "Dictionnaires C#", "Associer des cles et des valeurs."),
+            ("csharp", "csharp-linq", "LINQ C#", "Interroger et transformer des collections."),
+            ("csharp", "csharp-exceptions", "Exceptions C#", "Prevoir et traiter les erreurs."),
+            ("csharp", "csharp-efcore", "EF Core", "Comprendre les entites, DbContext et requetes EF Core."),
+            ("sqlserver", "sql-select", "SELECT SQL", "Lire des colonnes depuis une table."),
+            ("sqlserver", "sql-where", "WHERE SQL", "Filtrer les lignes avec des conditions."),
+            ("sqlserver", "sql-order-by", "ORDER BY SQL", "Trier les resultats."),
+            ("sqlserver", "sql-aggregates", "Agregats SQL", "Calculer COUNT, SUM, AVG, MIN et MAX."),
+            ("sqlserver", "sql-group-by", "GROUP BY SQL", "Regrouper les resultats."),
+            ("sqlserver", "sql-joins", "Jointures SQL", "Relier plusieurs tables."),
+            ("sqlserver", "sql-insert", "INSERT SQL", "Ajouter des donnees."),
+            ("sqlserver", "sql-update", "UPDATE SQL", "Modifier des donnees."),
+            ("sqlserver", "sql-delete", "DELETE SQL", "Supprimer des donnees prudemment."),
+            ("sqlserver", "sql-modeling", "Modelisation SQL", "Structurer tables, cles et contraintes."),
+            ("sqlserver", "sql-indexes", "Index SQL", "Optimiser les lectures avec des index."),
+            ("php-symfony", "php-syntax", "Syntaxe PHP", "Ecrire un script PHP valide."),
+            ("php-symfony", "php-variables", "Variables PHP", "Manipuler les variables PHP."),
+            ("php-symfony", "php-functions", "Fonctions PHP", "Creer des fonctions PHP."),
+            ("php-symfony", "php-arrays", "Tableaux PHP", "Utiliser les tableaux PHP."),
+            ("php-symfony", "php-oop", "POO PHP", "Structurer le code avec classes et objets."),
+            ("php-symfony", "symfony-routing", "Routing Symfony", "Declarer des routes."),
+            ("php-symfony", "symfony-controller", "Controleurs Symfony", "Construire des controleurs."),
+            ("php-symfony", "symfony-service", "Services Symfony", "Extraire la logique dans des services."),
+            ("php-symfony", "symfony-doctrine", "Doctrine Symfony", "Modeliser et persister les entites."),
+            ("php-symfony", "symfony-form", "Formulaires Symfony", "Gerer des formulaires."),
+            ("php-symfony", "symfony-validation", "Validation Symfony", "Valider les donnees metier.")
+        };
+
+        foreach (var definition in skillDefinitions)
+        {
+            if (!await db.Skills.AnyAsync(skill => skill.Slug == definition.Slug))
+            {
+                db.Skills.Add(new Skill { CourseLanguage = definition.Language, Slug = definition.Slug, Name = definition.Name, Description = definition.Description });
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        var skills = await db.Skills.ToDictionaryAsync(skill => skill.Slug);
+        var lessons = await db.Lessons
+            .Include(lesson => lesson.Chapter)
+            .ThenInclude(chapter => chapter!.Course)
+            .Include(lesson => lesson.LessonSkills)
+            .Include(lesson => lesson.Hints)
+            .Where(lesson => lesson.Chapter != null)
+            .ToListAsync();
+        var lessonPlans = BuildLessonPlans();
+
+        foreach (var lesson in lessons)
+        {
+            if (lessonPlans.TryGetValue(lesson.Slug, out var plan))
+            {
+                foreach (var (slug, weight) in plan.Skills.Take(3))
+                {
+                    if (skills.TryGetValue(slug, out var skill) && lesson.LessonSkills.All(item => item.SkillId != skill.Id))
+                    {
+                        db.LessonSkills.Add(new LessonSkill { LessonId = lesson.Id, SkillId = skill.Id, Weight = weight });
+                    }
+                }
+
+                if (lesson.Hints.Count == 0)
+                {
+                    var hints = plan.Hints.Count > 0 ? plan.Hints : DefaultLessonHints(lesson);
+                    var level = 1;
+                    foreach (var hint in hints)
+                    {
+                        db.LessonHints.Add(new LessonHint { LessonId = lesson.Id, HintLevel = level++, Content = hint });
+                    }
+                }
+
+                continue;
+            }
+
+            foreach (var slug in InferSkillSlugs(lesson).Take(3))
+            {
+                if (skills.TryGetValue(slug, out var skill) && lesson.LessonSkills.All(item => item.SkillId != skill.Id))
+                {
+                    db.LessonSkills.Add(new LessonSkill { LessonId = lesson.Id, SkillId = skill.Id, Weight = 1 });
+                }
+            }
+
+            if (lesson.Hints.Count == 0)
+            {
+                var level = 1;
+                foreach (var hint in DefaultLessonHints(lesson))
+                {
+                    db.LessonHints.Add(new LessonHint { LessonId = lesson.Id, HintLevel = level++, Content = hint });
+                }
+            }
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    private sealed record LessonPlan(IReadOnlyList<(string Slug, int Weight)> Skills, IReadOnlyList<string> Hints);
+
+    private static Dictionary<string, LessonPlan> BuildLessonPlans() => new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["hello-world"] = new LessonPlan(
+            [
+                ("csharp-console-output", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Commence par un Console.WriteLine simple.",
+                "Ajoute une deuxieme ligne avec un autre Console.WriteLine.",
+                "Verifie le texte exact attendu, avec guillemets et point-virgule."
+            ]),
+        ["variables"] = new LessonPlan(
+            [
+                ("csharp-variables", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Identifie d'abord la valeur a stocker.",
+                "Tu dois utiliser une variable avant l'affichage.",
+                "Declare une variable puis utilise-la dans Console.WriteLine."
+            ]),
+        ["types"] = new LessonPlan(
+            [
+                ("csharp-types", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Chaque variable doit avoir un type adapte.",
+                "Pense a int, string, bool, double.",
+                "Affiche ensuite le texte demande avec ces valeurs."
+            ]),
+        ["operators"] = new LessonPlan(
+            [
+                ("csharp-conditions", 1),
+                ("csharp-variables", 1),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Calcule d'abord le total avec une multiplication.",
+                "Compare le total pour obtenir un booleen.",
+                "Affiche ensuite les deux lignes demandees."
+            ]),
+        ["foundations-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-variables", 1),
+                ("csharp-types", 1),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Reprends les variables une a une.",
+                "Calcule le score final avant d'afficher.",
+                "Affiche exactement les deux lignes attendues."
+            ]),
+        ["if-else"] = new LessonPlan(
+            [
+                ("csharp-conditions", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Ecris un if avec une condition simple.",
+                "Ajoute un else qui couvre le cas inverse.",
+                "Affiche le texte exact attendu."
+            ]),
+        ["switch"] = new LessonPlan(
+            [
+                ("csharp-conditions", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Declare le switch sur la variable demandee.",
+                "Ajoute un case pour la valeur specifique.",
+                "Pense au break dans chaque case."
+            ]),
+        ["for-loop"] = new LessonPlan(
+            [
+                ("csharp-loops", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Initialise un compteur de 1 a 3.",
+                "Affiche le numero a chaque tour.",
+                "Verifie l'incrementation et la condition."
+            ]),
+        ["while-loop"] = new LessonPlan(
+            [
+                ("csharp-loops", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "La condition du while doit changer a chaque tour.",
+                "Decremente la variable dans la boucle.",
+                "Affiche l'energie avant de la modifier."
+            ]),
+        ["foreach-loop"] = new LessonPlan(
+            [
+                ("csharp-loops", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Parcours la liste avec foreach.",
+                "Affiche chaque element de la collection.",
+                "N'utilise pas de compteur manuel."
+            ]),
+        ["flow-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-conditions", 1),
+                ("csharp-loops", 1),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Commence par la boucle pour les tours.",
+                "Ajoute un if / else pour la victoire.",
+                "Affiche chaque ligne exactement comme demande."
+            ]),
+        ["create-method"] = new LessonPlan(
+            [
+                ("csharp-methods", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Declare une methode static void.",
+                "Place l'affichage dans la methode.",
+                "Appelle la methode apres sa declaration."
+            ]),
+        ["method-parameters"] = new LessonPlan(
+            [
+                ("csharp-methods", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Ajoute un parametre dans la signature.",
+                "Utilise le parametre dans Console.WriteLine.",
+                "Appelle la methode avec la valeur demandee."
+            ]),
+        ["return-value"] = new LessonPlan(
+            [
+                ("csharp-methods", 2),
+                ("csharp-types", 1)
+            ],
+            [
+                "Retourne le resultat du calcul.",
+                "Utilise la valeur retournee ensuite.",
+                "Affiche le texte exact attendu."
+            ]),
+        ["scope"] = new LessonPlan(
+            [
+                ("csharp-methods", 1),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Declare la variable dans la methode.",
+                "Affecte une valeur claire.",
+                "Affiche la variable dans le meme bloc."
+            ]),
+        ["overload"] = new LessonPlan(
+            [
+                ("csharp-methods", 2),
+                ("csharp-types", 1)
+            ],
+            [
+                "Declare deux methodes avec le meme nom.",
+                "Les parametres doivent differer.",
+                "Affiche les deux messages attendus."
+            ]),
+        ["methods-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-methods", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Retourne la bonne valeur dans chaque methode.",
+                "Compose les appels dans l'affichage final.",
+                "Verifie les valeurs attendues."
+            ]),
+        ["classes"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-console-output", 1)
+            ],
+            [
+                "Declare une classe avec le mot-cle class.",
+                "Laisse-la vide si demande.",
+                "Garde l'affichage principal."
+            ]),
+        ["objects"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Cree une instance avec new.",
+                "Stocke-la dans une variable.",
+                "Affiche ensuite le message."
+            ]),
+        ["properties"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Declare une propriete avec get; set;.",
+                "Assigne la valeur avant d'afficher.",
+                "Lis la propriete dans l'affichage."
+            ]),
+        ["constructors"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-methods", 1)
+            ],
+            [
+                "Ajoute un constructeur public.",
+                "Assigne la propriete dans le constructeur.",
+                "Instancie avec l'argument demande."
+            ]),
+        ["oop-basics-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Declare la classe et ses proprietes.",
+                "Ajoute un constructeur complet.",
+                "Affiche le texte attendu."
+            ]),
+        ["inheritance"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-types", 1)
+            ],
+            [
+                "Fais heriter Warrior de Character.",
+                "Reutilise la propriete Name.",
+                "Affiche le texte attendu."
+            ]),
+        ["polymorphism"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-methods", 1)
+            ],
+            [
+                "Ajoute override sur Attack.",
+                "Retourne le texte demande.",
+                "Laisse la classe de base intacte."
+            ]),
+        ["interfaces"] = new LessonPlan(
+            [
+                ("csharp-classes", 1),
+                ("csharp-methods", 1)
+            ],
+            [
+                "Declare une interface avec une methode.",
+                "Implemente-la dans la classe.",
+                "Affiche le texte attendu."
+            ]),
+        ["access-modifiers"] = new LessonPlan(
+            [
+                ("csharp-classes", 1),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Rends la propriete accessible avec public.",
+                "Garde les champs prives si demandes.",
+                "Affiche le resultat attendu."
+            ]),
+        ["advanced-oop-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-classes", 2),
+                ("csharp-methods", 1)
+            ],
+            [
+                "Assemble heritage, override et interfaces.",
+                "Respecte la structure de classe demandee.",
+                "Verifie les sorties attendues."
+            ]),
+        ["arrays"] = new LessonPlan(
+            [
+                ("csharp-lists", 1),
+                ("csharp-loops", 1)
+            ],
+            [
+                "Declare un tableau avec les valeurs demandees.",
+                "Parcours-le avec une boucle.",
+                "Affiche chaque element."
+            ]),
+        ["lists"] = new LessonPlan(
+            [
+                ("csharp-lists", 2),
+                ("csharp-loops", 1)
+            ],
+            [
+                "Cree une List avec les elements.",
+                "Ajoute ou modifie l'element demande.",
+                "Affiche la liste."
+            ]),
+        ["dictionaries"] = new LessonPlan(
+            [
+                ("csharp-dictionaries", 2),
+                ("csharp-lists", 1)
+            ],
+            [
+                "Declare un Dictionary.",
+                "Ajoute les paires cle/valeur.",
+                "Affiche la valeur attendue."
+            ]),
+        ["linq"] = new LessonPlan(
+            [
+                ("csharp-linq", 2),
+                ("csharp-lists", 1)
+            ],
+            [
+                "Utilise une requete LINQ simple.",
+                "Filtre ou projette selon la demande.",
+                "Affiche le resultat attendu."
+            ]),
+        ["data-structures-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-lists", 1),
+                ("csharp-dictionaries", 1),
+                ("csharp-linq", 1)
+            ],
+            [
+                "Combine liste, dictionnaire et LINQ.",
+                "Assure-toi que les structures sont remplies.",
+                "Affiche le resultat attendu."
+            ]),
+        ["try-catch"] = new LessonPlan(
+            [
+                ("csharp-exceptions", 2),
+                ("csharp-conditions", 1)
+            ],
+            [
+                "Enveloppe le code dans try/catch.",
+                "Capture l'exception demandee.",
+                "Affiche le message attendu."
+            ]),
+        ["exceptions"] = new LessonPlan(
+            [
+                ("csharp-exceptions", 2),
+                ("csharp-variables", 1)
+            ],
+            [
+                "Lance une exception au bon endroit.",
+                "Utilise throw avec le type demande.",
+                "Affiche ou gere le message attendu."
+            ]),
+        ["nullables"] = new LessonPlan(
+            [
+                ("csharp-exceptions", 1),
+                ("csharp-types", 1)
+            ],
+            [
+                "Utilise le type nullable avec ?.",
+                "Controle la valeur avant usage.",
+                "Affiche le resultat attendu."
+            ]),
+        ["errors-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-exceptions", 2),
+                ("csharp-conditions", 1)
+            ],
+            [
+                "Combine try/catch et validation.",
+                "Laisse le programme stable.",
+                "Affiche les messages demandes."
+            ]),
+        ["relational-databases"] = new LessonPlan(
+            [
+                ("csharp-efcore", 2),
+                ("csharp-classes", 1)
+            ],
+            [
+                "Pense entites et relations.",
+                "Structure les classes de modele.",
+                "Relie les tables comme demande."
+            ]),
+        ["entity-framework-core"] = new LessonPlan(
+            [
+                ("csharp-efcore", 2),
+                ("csharp-classes", 1)
+            ],
+            [
+                "Cree le DbContext.",
+                "Ajoute les DbSet demandes.",
+                "Verifie la configuration."
+            ]),
+        ["dbcontext"] = new LessonPlan(
+            [
+                ("csharp-efcore", 2),
+                ("csharp-classes", 1)
+            ],
+            [
+                "Declare un DbContext derive.",
+                "Ajoute les DbSet utiles.",
+                "Configure l'acces aux donnees."
+            ]),
+        ["crud"] = new LessonPlan(
+            [
+                ("csharp-efcore", 2),
+                ("csharp-linq", 1)
+            ],
+            [
+                "Ajoute une creation ou mise a jour.",
+                "Utilise SaveChanges si demande.",
+                "Affiche ou retourne le resultat attendu."
+            ]),
+        ["database-checkpoint"] = new LessonPlan(
+            [
+                ("csharp-efcore", 2),
+                ("csharp-linq", 1)
+            ],
+            [
+                "Relie les entites aux operations.",
+                "Ecris la requete finale.",
+                "Affiche le resultat attendu."
+            ]),
+        ["sql-relational-database"] = new LessonPlan(
+            [
+                ("sql-select", 2),
+                ("sql-modeling", 1)
+            ],
+            [
+                "Utilise SELECT et FROM sur la bonne table.",
+                "Choisis uniquement la colonne demandee.",
+                "Evite SELECT *."
+            ]),
+        ["sql-tables-rows-columns"] = new LessonPlan(
+            [
+                ("sql-select", 2),
+                ("sql-modeling", 1)
+            ],
+            [
+                "Liste chaque colonne demandee.",
+                "Cible la table Products.",
+                "Evite SELECT *."
+            ]),
+        ["sql-server-data-types"] = new LessonPlan(
+            [
+                ("sql-select", 2),
+                ("sql-modeling", 1)
+            ],
+            [
+                "Selectionne les colonnes Name, Price, IsActive.",
+                "Garde une requete simple.",
+                "Verifie le resultat."
+            ]),
+        ["sql-select"] = new LessonPlan(
+            [
+                ("sql-select", 2),
+                ("sql-order-by", 1)
+            ],
+            [
+                "Choisis seulement Name et Price.",
+                "Garde la requete lisible.",
+                "Evite SELECT *."
+            ]),
+        ["sql-where"] = new LessonPlan(
+            [
+                ("sql-where", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute WHERE avec les deux conditions.",
+                "Garde les colonnes demandees.",
+                "Verifie les deux produits attendus."
+            ]),
+        ["sql-foundations-checkpoint"] = new LessonPlan(
+            [
+                ("sql-where", 1),
+                ("sql-select", 1),
+                ("sql-order-by", 1)
+            ],
+            [
+                "Selectionne les colonnes demandees.",
+                "Filtre avec les conditions.",
+                "Valide les lignes attendues."
+            ]),
+        ["sql-order-by"] = new LessonPlan(
+            [
+                ("sql-order-by", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute ORDER BY sur la colonne cible.",
+                "Verifie l'ordre attendu.",
+                "Evite SELECT *."
+            ]),
+        ["sql-top"] = new LessonPlan(
+            [
+                ("sql-order-by", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise TOP avec le nombre demande.",
+                "Trie si necessaire.",
+                "Limite correctement les lignes."
+            ]),
+        ["sql-distinct"] = new LessonPlan(
+            [
+                ("sql-select", 1),
+                ("sql-where", 1)
+            ],
+            [
+                "Ajoute DISTINCT sur la bonne colonne.",
+                "Garde une requete simple.",
+                "Verifie les doublons."
+            ]),
+        ["sql-like"] = new LessonPlan(
+            [
+                ("sql-where", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise LIKE avec %.",
+                "Garde la bonne colonne dans SELECT.",
+                "Verifie les lignes attendues."
+            ]),
+        ["sql-in"] = new LessonPlan(
+            [
+                ("sql-where", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise IN avec les valeurs attendues.",
+                "Selectionne les colonnes demandees.",
+                "Verifie les lignes."
+            ]),
+        ["sql-between"] = new LessonPlan(
+            [
+                ("sql-where", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise BETWEEN pour le filtre.",
+                "Selectionne les colonnes demandees.",
+                "Verifie le resultat."
+            ]),
+        ["sql-is-null"] = new LessonPlan(
+            [
+                ("sql-where", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise IS NULL ou IS NOT NULL.",
+                "Garde une requete claire.",
+                "Verifie les lignes."
+            ]),
+        ["sql-filtering-checkpoint"] = new LessonPlan(
+            [
+                ("sql-where", 1),
+                ("sql-order-by", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Applique les filtres successifs.",
+                "Trie si demande.",
+                "Valide le resultat final."
+            ]),
+        ["sql-count"] = new LessonPlan(
+            [
+                ("sql-aggregates", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise COUNT sur la colonne.",
+                "Ajoute un alias si demande.",
+                "Verifie le resultat."
+            ]),
+        ["sql-sum"] = new LessonPlan(
+            [
+                ("sql-aggregates", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise SUM sur la colonne.",
+                "Ajoute un alias si besoin.",
+                "Verifie le resultat."
+            ]),
+        ["sql-avg"] = new LessonPlan(
+            [
+                ("sql-aggregates", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise AVG sur la colonne.",
+                "Ajoute un alias si besoin.",
+                "Verifie le resultat."
+            ]),
+        ["sql-min-max"] = new LessonPlan(
+            [
+                ("sql-aggregates", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise MIN et MAX.",
+                "Affiche les deux valeurs.",
+                "Verifie le resultat."
+            ]),
+        ["sql-group-by"] = new LessonPlan(
+            [
+                ("sql-group-by", 2),
+                ("sql-aggregates", 1)
+            ],
+            [
+                "Ajoute GROUP BY sur la bonne colonne.",
+                "Combine avec un agregat.",
+                "Verifie les groupes."
+            ]),
+        ["sql-having"] = new LessonPlan(
+            [
+                ("sql-group-by", 2),
+                ("sql-aggregates", 1)
+            ],
+            [
+                "Ajoute HAVING avec l'agregat.",
+                "Garde le GROUP BY.",
+                "Verifie les groupes filtres."
+            ]),
+        ["sql-aggregation-checkpoint"] = new LessonPlan(
+            [
+                ("sql-aggregates", 1),
+                ("sql-group-by", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Combine SELECT, GROUP BY et agregats.",
+                "Filtre si necessaire.",
+                "Verifie les valeurs finales."
+            ]),
+        ["sql-inner-join"] = new LessonPlan(
+            [
+                ("sql-joins", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute INNER JOIN avec la bonne cle.",
+                "Selectionne les colonnes demandees.",
+                "Verifie les lignes."
+            ]),
+        ["sql-left-join"] = new LessonPlan(
+            [
+                ("sql-joins", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute LEFT JOIN avec la bonne cle.",
+                "Garde toutes les lignes de gauche.",
+                "Verifie les resultats."
+            ]),
+        ["sql-right-join"] = new LessonPlan(
+            [
+                ("sql-joins", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute RIGHT JOIN si supporte.",
+                "Garde toutes les lignes de droite.",
+                "Verifie les resultats."
+            ]),
+        ["sql-full-outer-join"] = new LessonPlan(
+            [
+                ("sql-joins", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute FULL OUTER JOIN.",
+                "Garde toutes les lignes des deux tables.",
+                "Verifie les resultats."
+            ]),
+        ["sql-table-aliases"] = new LessonPlan(
+            [
+                ("sql-joins", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute des alias courts aux tables.",
+                "Utilise-les dans la requete.",
+                "Garde la lecture claire."
+            ]),
+        ["sql-joins-checkpoint"] = new LessonPlan(
+            [
+                ("sql-joins", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Combine jointures et selection.",
+                "Verifie les resultats.",
+                "Garde la requete lisible."
+            ]),
+        ["sql-insert"] = new LessonPlan(
+            [
+                ("sql-insert", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Utilise INSERT INTO avec les colonnes.",
+                "Ajoute les valeurs demandees.",
+                "Verifie la lecture finale."
+            ]),
+        ["sql-update"] = new LessonPlan(
+            [
+                ("sql-update", 2),
+                ("sql-where", 1)
+            ],
+            [
+                "Ajoute UPDATE avec SET.",
+                "Ajoute un WHERE precis.",
+                "Verifie la sortie finale."
+            ]),
+        ["sql-delete"] = new LessonPlan(
+            [
+                ("sql-delete", 2),
+                ("sql-where", 1)
+            ],
+            [
+                "Ajoute DELETE avec WHERE.",
+                "Ne supprime pas trop de lignes.",
+                "Verifie la sortie finale."
+            ]),
+        ["sql-simple-transaction"] = new LessonPlan(
+            [
+                ("sql-update", 1),
+                ("sql-where", 1)
+            ],
+            [
+                "Entoure les operations d'une transaction.",
+                "Applique la modification demandee.",
+                "Verifie le resultat."
+            ]),
+        ["sql-rollback-commit"] = new LessonPlan(
+            [
+                ("sql-update", 1),
+                ("sql-where", 1)
+            ],
+            [
+                "Ajoute COMMIT ou ROLLBACK.",
+                "Garde la transaction coherente.",
+                "Verifie la sortie."
+            ]),
+        ["sql-modification-checkpoint"] = new LessonPlan(
+            [
+                ("sql-update", 1),
+                ("sql-delete", 1),
+                ("sql-insert", 1)
+            ],
+            [
+                "Combine insertion, mise a jour et suppression.",
+                "Ajoute les WHERE necessaires.",
+                "Verifie la sortie finale."
+            ]),
+        ["sql-primary-keys"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute la cle primaire.",
+                "Verifie la definition de table.",
+                "Garde la structure demandee."
+            ]),
+        ["sql-foreign-keys"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-joins", 1)
+            ],
+            [
+                "Ajoute la cle etrangere.",
+                "Verifie la reference.",
+                "Garde la structure demandee."
+            ]),
+        ["sql-constraints"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute la contrainte demandee.",
+                "Verifie la syntaxe.",
+                "Garde la structure attendue."
+            ]),
+        ["sql-simple-normalization"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-joins", 1)
+            ],
+            [
+                "Separe les entites correctement.",
+                "Relie les tables.",
+                "Verifie le resultat."
+            ]),
+        ["sql-relationships"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-joins", 1)
+            ],
+            [
+                "Declare les relations.",
+                "Ajoute les cles etrangeres.",
+                "Verifie les jointures."
+            ]),
+        ["sql-modeling-checkpoint"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-joins", 1)
+            ],
+            [
+                "Assemble schema et relations.",
+                "Verifie les contraintes.",
+                "Valide la requete finale."
+            ]),
+        ["sql-indexes"] = new LessonPlan(
+            [
+                ("sql-indexes", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Cree un index sur la colonne cible.",
+                "Utilise la bonne syntaxe.",
+                "Verifie la requete finale."
+            ]),
+        ["sql-views"] = new LessonPlan(
+            [
+                ("sql-select", 1),
+                ("sql-order-by", 1)
+            ],
+            [
+                "Cree une vue avec SELECT.",
+                "Garde les colonnes attendues.",
+                "Verifie la vue."
+            ]),
+        ["sql-stored-procedures"] = new LessonPlan(
+            [
+                ("sql-aggregates", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Declare une procedure stockee.",
+                "Ajoute un SELECT simple.",
+                "Verifie la sortie."
+            ]),
+        ["sql-functions"] = new LessonPlan(
+            [
+                ("sql-aggregates", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Cree une fonction SQL.",
+                "Retourne la valeur demandee.",
+                "Verifie le resultat."
+            ]),
+        ["sql-tsql-variables"] = new LessonPlan(
+            [
+                ("sql-select", 2)
+            ],
+            [
+                "Declare la variable avec DECLARE.",
+                "Affecte une valeur avec SET.",
+                "Utilise-la dans la requete."
+            ]),
+        ["sql-advanced-checkpoint"] = new LessonPlan(
+            [
+                ("sql-indexes", 1),
+                ("sql-aggregates", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Combine les notions avancees.",
+                "Verifie les objets crees.",
+                "Valide le resultat final."
+            ]),
+        ["sql-complete-schema"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-joins", 1)
+            ],
+            [
+                "Cree le schema complet.",
+                "Definis les cles et relations.",
+                "Verifie les tables."
+            ]),
+        ["sql-create-project-tables"] = new LessonPlan(
+            [
+                ("sql-modeling", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Cree les tables demandees.",
+                "Respecte les types.",
+                "Verifie le schema."
+            ]),
+        ["sql-seed-project-data"] = new LessonPlan(
+            [
+                ("sql-insert", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute les donnees avec INSERT.",
+                "Verifie les valeurs.",
+                "Valide la lecture finale."
+            ]),
+        ["sql-business-queries"] = new LessonPlan(
+            [
+                ("sql-joins", 1),
+                ("sql-aggregates", 1),
+                ("sql-group-by", 1)
+            ],
+            [
+                "Combine jointures et agregats.",
+                "Ajoute le GROUP BY si besoin.",
+                "Verifie les resultats."
+            ]),
+        ["sql-simple-optimization"] = new LessonPlan(
+            [
+                ("sql-indexes", 2),
+                ("sql-select", 1)
+            ],
+            [
+                "Ajoute un index adapte.",
+                "Verifie la requete.",
+                "Valide les resultats."
+            ]),
+        ["sql-project-checkpoint"] = new LessonPlan(
+            [
+                ("sql-joins", 1),
+                ("sql-aggregates", 1),
+                ("sql-select", 1)
+            ],
+            [
+                "Assemble les requetes du projet.",
+                "Verifie les resultats.",
+                "Valide la sortie finale."
+            ]),
+        ["sql-boss-final-ecommerce"] = new LessonPlan(
+            [
+                ("sql-joins", 1),
+                ("sql-aggregates", 1),
+                ("sql-group-by", 1)
+            ],
+            [
+                "Combine schema, donnees et requetes.",
+                "Verifie les resultats attendus.",
+                "Valide chaque section."
+            ]),
+        ["boss-final"] = new LessonPlan(
+            [
+                ("csharp-efcore", 1),
+                ("csharp-linq", 1),
+                ("csharp-classes", 1)
+            ],
+            [
+                "Assemble les modules precedents.",
+                "Verifie chaque etape du projet.",
+                "Valide les sorties demandees."
+            ]),
+        ["php-symfony-boss-final-products"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-form", 1),
+                ("symfony-doctrine", 1)
+            ],
+            [
+                "Ajoute entite, routes et controller.",
+                "Integre formulaire et validation.",
+                "Pense au service et a la securite."
+            ]),
+        ["php-symfony-module-1-intermediate-boss"] = new LessonPlan(
+            [
+                ("php-syntax", 1),
+                ("php-variables", 1),
+                ("php-functions", 1)
+            ],
+            [
+                "Reprends les bases PHP du module.",
+                "Verifie la syntaxe, les variables et echo.",
+                "Affiche le texte attendu."
+            ]),
+        ["php-syntax"] = new LessonPlan(
+            [
+                ("php-syntax", 2),
+                ("php-variables", 1)
+            ],
+            [
+                "Commence par la balise PHP.",
+                "Utilise echo avec le texte exact.",
+                "Ajoute le point-virgule."
+            ]),
+        ["php-variables"] = new LessonPlan(
+            [
+                ("php-variables", 2),
+                ("php-syntax", 1)
+            ],
+            [
+                "Declare $name avec Ada.",
+                "Utilise echo pour afficher.",
+                "Concatene le texte et la variable."
+            ]),
+        ["php-types"] = new LessonPlan(
+            [
+                ("php-variables", 1),
+                ("php-syntax", 1)
+            ],
+            [
+                "Declare les quatre variables.",
+                "Assigne les bons types.",
+                "Affiche le texte demande."
+            ]),
+        ["php-conditions"] = new LessonPlan(
+            [
+                ("php-variables", 1),
+                ("php-syntax", 1)
+            ],
+            [
+                "Ecris un if et un else.",
+                "Teste la variable stock.",
+                "Affiche le texte attendu."
+            ]),
+        ["php-loops"] = new LessonPlan(
+            [
+                ("php-variables", 1),
+                ("php-syntax", 1)
+            ],
+            [
+                "Utilise un for avec $i.",
+                "Affiche dans la boucle.",
+                "Verifie les trois lignes."
+            ]),
+        ["php-functions"] = new LessonPlan(
+            [
+                ("php-functions", 2),
+                ("php-syntax", 1)
+            ],
+            [
+                "Declare la fonction avec types.",
+                "Retourne la chaine demandee.",
+                "Appelle la fonction."
+            ]),
+        ["php-symfony-module-2-classes"] = new LessonPlan(
+            [
+                ("php-oop", 2),
+                ("php-syntax", 1)
+            ],
+            [
+                "Declare une classe PHP.",
+                "Utilise le mot-cle class.",
+                "Garde la structure simple."
+            ]),
+        ["php-symfony-module-2-objets"] = new LessonPlan(
+            [
+                ("php-oop", 2),
+                ("php-syntax", 1)
+            ],
+            [
+                "Instancie un objet avec new.",
+                "Stocke-le dans une variable.",
+                "Garde un code PHP valide."
+            ]),
+        ["php-symfony-module-2-proprietes"] = new LessonPlan(
+            [
+                ("php-oop", 2),
+                ("php-variables", 1)
+            ],
+            [
+                "Declare une propriete.",
+                "Garde la visibilite demandee.",
+                "Utilise la bonne syntaxe PHP."
+            ]),
+        ["php-symfony-module-2-methodes"] = new LessonPlan(
+            [
+                ("php-oop", 2),
+                ("php-functions", 1)
+            ],
+            [
+                "Declare une methode publique.",
+                "Retourne la valeur attendue.",
+                "Respecte les types."
+            ]),
+        ["php-symfony-module-2-constructeurs"] = new LessonPlan(
+            [
+                ("php-oop", 2),
+                ("php-variables", 1)
+            ],
+            [
+                "Ajoute __construct.",
+                "Affecte les proprietes.",
+                "Verifie la signature."
+            ]),
+        ["php-symfony-module-2-encapsulation"] = new LessonPlan(
+            [
+                ("php-oop", 2),
+                ("php-functions", 1)
+            ],
+            [
+                "Rends les proprietes privees.",
+                "Expose un getter.",
+                "Garde un code PHP valide."
+            ]),
+        ["php-symfony-module-3-structure-dun-projet-symfony"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Respecte la structure Symfony.",
+                "Utilise les namespaces attendus.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-3-routes"] = new LessonPlan(
+            [
+                ("symfony-routing", 2),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Ajoute l'attribut Route.",
+                "Definis le chemin.",
+                "Garde un controller valide."
+            ]),
+        ["php-symfony-module-3-controllers"] = new LessonPlan(
+            [
+                ("symfony-controller", 2),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Etends AbstractController.",
+                "Ajoute une methode d'action.",
+                "Retourne une reponse."
+            ]),
+        ["php-symfony-module-3-responses"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Retourne une Response.",
+                "Utilise le bon namespace.",
+                "Garde un code coherent."
+            ]),
+        ["php-symfony-module-3-templates-twig"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Utilise la syntaxe Twig.",
+                "Affiche une variable.",
+                "Garde un template minimal."
+            ]),
+        ["php-symfony-module-3-parametres-de-route"] = new LessonPlan(
+            [
+                ("symfony-routing", 2),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Ajoute un parametre dans la route.",
+                "Utilise-le dans la methode.",
+                "Retourne une reponse."
+            ]),
+        ["php-symfony-module-4-creation-de-formulaire"] = new LessonPlan(
+            [
+                ("symfony-form", 2),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Cree le formulaire avec createForm.",
+                "Utilise un type de formulaire.",
+                "Garde la syntaxe Symfony."
+            ]),
+        ["php-symfony-module-4-validation"] = new LessonPlan(
+            [
+                ("symfony-validation", 2),
+                ("symfony-form", 1)
+            ],
+            [
+                "Ajoute une contrainte de validation.",
+                "Utilise l'attribut Assert.",
+                "Garde la propriete ciblee."
+            ]),
+        ["php-symfony-module-4-contraintes"] = new LessonPlan(
+            [
+                ("symfony-validation", 2),
+                ("symfony-form", 1)
+            ],
+            [
+                "Utilise une contrainte specifique.",
+                "Garde la syntaxe d'attribut.",
+                "Associe a la bonne propriete."
+            ]),
+        ["php-symfony-module-4-gestion-des-erreurs"] = new LessonPlan(
+            [
+                ("symfony-form", 1),
+                ("symfony-validation", 1)
+            ],
+            [
+                "Affiche form_errors dans Twig.",
+                "Garde la syntaxe Twig.",
+                "Cible le bon champ."
+            ]),
+        ["php-symfony-module-4-traitement-de-la-soumission"] = new LessonPlan(
+            [
+                ("symfony-form", 2),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Utilise handleRequest.",
+                "Teste isSubmitted et isValid.",
+                "Garde le flux complet."
+            ]),
+        ["php-symfony-module-5-entites"] = new LessonPlan(
+            [
+                ("symfony-doctrine", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Ajoute l'attribut ORM Entity.",
+                "Declare la classe.",
+                "Garde les namespaces."
+            ]),
+        ["php-symfony-module-5-repositories"] = new LessonPlan(
+            [
+                ("symfony-doctrine", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Etends ServiceEntityRepository.",
+                "Ajoute le constructeur.",
+                "Garde un repository valide."
+            ]),
+        ["php-symfony-module-5-migrations"] = new LessonPlan(
+            [
+                ("symfony-doctrine", 2),
+                ("php-syntax", 1)
+            ],
+            [
+                "Declare une migration.",
+                "Utilise AbstractMigration.",
+                "Garde la structure attendue."
+            ]),
+        ["php-symfony-module-5-relations-simples"] = new LessonPlan(
+            [
+                ("symfony-doctrine", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Ajoute l'attribut ManyToOne.",
+                "Declare la propriete.",
+                "Garde la relation coherente."
+            ]),
+        ["php-symfony-module-5-crud-avec-doctrine"] = new LessonPlan(
+            [
+                ("symfony-doctrine", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Utilise persist et flush.",
+                "Ajoute remove si demande.",
+                "Garde un flux Doctrine clair."
+            ]),
+        ["php-symfony-module-6-services"] = new LessonPlan(
+            [
+                ("symfony-service", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Declare un service.",
+                "Garde la classe simple.",
+                "Utilise le bon namespace."
+            ]),
+        ["php-symfony-module-6-injection-de-dependances"] = new LessonPlan(
+            [
+                ("symfony-service", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Ajoute un constructeur.",
+                "Injecte le service.",
+                "Garde la syntaxe PHP 8."
+            ]),
+        ["php-symfony-module-6-configuration"] = new LessonPlan(
+            [
+                ("symfony-service", 1),
+                ("php-syntax", 1)
+            ],
+            [
+                "Ajoute la configuration service.",
+                "Respecte le YAML.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-6-separation-controller---service"] = new LessonPlan(
+            [
+                ("symfony-service", 2),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Appelle un service depuis le controller.",
+                "Garde une methode claire.",
+                "Retourne une reponse."
+            ]),
+        ["php-symfony-module-6-bonnes-pratiques-symfony"] = new LessonPlan(
+            [
+                ("symfony-service", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Utilise readonly si demande.",
+                "Garde une classe simple.",
+                "Respecte la syntaxe PHP."
+            ]),
+        ["php-symfony-module-7-authentification"] = new LessonPlan(
+            [
+                ("php-syntax", 1),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Declare la classe d'authentification.",
+                "Etends la bonne classe.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-7-utilisateurs"] = new LessonPlan(
+            [
+                ("php-oop", 1),
+                ("php-syntax", 1)
+            ],
+            [
+                "Implemente UserInterface.",
+                "Declare la classe.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-7-roles"] = new LessonPlan(
+            [
+                ("php-syntax", 1),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Retourne un tableau de roles.",
+                "Utilise ROLE_USER.",
+                "Garde un exemple simple."
+            ]),
+        ["php-symfony-module-7-protection-des-routes"] = new LessonPlan(
+            [
+                ("symfony-routing", 1),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Ajoute l'attribut IsGranted.",
+                "Utilise ROLE_USER.",
+                "Garde la route protegee."
+            ]),
+        ["php-symfony-module-7-autorisations-simples"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Utilise denyAccessUnlessGranted.",
+                "Cible ROLE_USER.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-8-mini-application-mvc"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Declare un controller Symfony.",
+                "Ajoute une route.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-8-routes"] = new LessonPlan(
+            [
+                ("symfony-routing", 2),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Ajoute une route dans le module.",
+                "Utilise le bon nom.",
+                "Garde la syntaxe Symfony."
+            ]),
+        ["php-symfony-module-8-controllers"] = new LessonPlan(
+            [
+                ("symfony-controller", 2),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Ajoute un controller.",
+                "Retourne une reponse.",
+                "Garde le flux minimal."
+            ]),
+        ["php-symfony-module-8-templates-twig"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Utilise Twig pour afficher.",
+                "Garde un template simple.",
+                "Verifie la variable."
+            ]),
+        ["php-symfony-module-8-formulaires"] = new LessonPlan(
+            [
+                ("symfony-form", 2),
+                ("symfony-controller", 1)
+            ],
+            [
+                "Cree un formulaire Symfony.",
+                "Utilise createForm.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-8-doctrine"] = new LessonPlan(
+            [
+                ("symfony-doctrine", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Utilise EntityManager.",
+                "Ajoute persist et flush.",
+                "Garde un flux Doctrine."
+            ]),
+        ["php-symfony-module-8-services"] = new LessonPlan(
+            [
+                ("symfony-service", 2),
+                ("php-oop", 1)
+            ],
+            [
+                "Declare un service.",
+                "Injecte-le si besoin.",
+                "Garde un exemple minimal."
+            ]),
+        ["php-symfony-module-8-securite-simple"] = new LessonPlan(
+            [
+                ("symfony-controller", 1),
+                ("symfony-routing", 1)
+            ],
+            [
+                "Protege la route.",
+                "Utilise IsGranted.",
+                "Garde un exemple minimal."
+            ])
+    };
+
+    private static IReadOnlyList<string> DefaultLessonHints(Lesson lesson) =>
+    [
+        "Relis l'objectif et repere les mots-cles importants.",
+        "Compare ton code aux criteres de validation affiches apres soumission.",
+        $"Travaille directement la demande: {lesson.ExercisePrompt}"
+    ];
+
+    private static IReadOnlyList<string> InferSkillSlugs(Lesson lesson)
+    {
+        var slug = lesson.Slug.ToLowerInvariant();
+        var language = lesson.Chapter?.Course?.Language;
+        if (language == "sqlserver")
+        {
+            if (slug.Contains("join")) return ["sql-joins", "sql-select"];
+            if (slug.Contains("group") || slug.Contains("having")) return ["sql-group-by", "sql-aggregates"];
+            if (slug.Contains("count") || slug.Contains("sum") || slug.Contains("avg") || slug.Contains("min") || slug.Contains("max")) return ["sql-aggregates", "sql-select"];
+            if (slug.Contains("order")) return ["sql-order-by", "sql-select"];
+            if (slug.Contains("where") || slug.Contains("like") || slug.Contains("between") || slug.Contains("null") || slug.Contains("in")) return ["sql-where", "sql-select"];
+            if (slug.Contains("insert")) return ["sql-insert", "sql-select"];
+            if (slug.Contains("update")) return ["sql-update", "sql-where"];
+            if (slug.Contains("delete")) return ["sql-delete", "sql-where"];
+            if (slug.Contains("index")) return ["sql-indexes", "sql-select"];
+            if (slug.Contains("table") || slug.Contains("key") || slug.Contains("constraint") || slug.Contains("model")) return ["sql-modeling", "sql-select"];
+            if (slug.Contains("variable")) return ["sql-tsql-variables", "sql-select"];
+            return ["sql-select"];
+        }
+
+        if (language == "php-symfony")
+        {
+            if (slug.Contains("route")) return ["symfony-routing", "symfony-controller"];
+            if (slug.Contains("controller")) return ["symfony-controller", "symfony-routing"];
+            if (slug.Contains("service")) return ["symfony-service", "php-oop"];
+            if (slug.Contains("doctrine") || slug.Contains("entity")) return ["symfony-doctrine", "php-oop"];
+            if (slug.Contains("form")) return ["symfony-form", "symfony-validation"];
+            if (slug.Contains("validation")) return ["symfony-validation", "symfony-form"];
+            if (slug.Contains("array")) return ["php-arrays", "php-syntax"];
+            if (slug.Contains("function")) return ["php-functions", "php-syntax"];
+            if (slug.Contains("variable")) return ["php-variables", "php-syntax"];
+            if (slug.Contains("class") || slug.Contains("oop")) return ["php-oop", "php-syntax"];
+            return ["php-syntax"];
+        }
+
+        if (slug.Contains("variable")) return ["csharp-variables", "csharp-console-output"];
+        if (slug.Contains("type")) return ["csharp-types", "csharp-variables"];
+        if (slug.Contains("if") || slug.Contains("condition") || slug.Contains("switch")) return ["csharp-conditions", "csharp-console-output"];
+        if (slug.Contains("loop") || slug.Contains("for") || slug.Contains("while") || slug.Contains("foreach")) return ["csharp-loops", "csharp-console-output"];
+        if (slug.Contains("method") || slug.Contains("parameter") || slug.Contains("return")) return ["csharp-methods", "csharp-types"];
+        if (slug.Contains("class") || slug.Contains("object") || slug.Contains("constructor") || slug.Contains("property")) return ["csharp-classes", "csharp-types"];
+        if (slug.Contains("list")) return ["csharp-lists", "csharp-loops"];
+        if (slug.Contains("dictionary")) return ["csharp-dictionaries", "csharp-lists"];
+        if (slug.Contains("linq")) return ["csharp-linq", "csharp-lists"];
+        if (slug.Contains("exception") || slug.Contains("try") || slug.Contains("error")) return ["csharp-exceptions", "csharp-conditions"];
+        if (slug.Contains("ef") || slug.Contains("database")) return ["csharp-efcore", "csharp-classes"];
+        return ["csharp-console-output"];
+    }
+
+    private static IReadOnlyList<(int Level, string Content)> InferHints(Lesson lesson) =>
+    [
+        (1, "Relis l'objectif et repere les mots-cles importants."),
+        (2, "Compare ton code aux criteres de validation affiches apres soumission."),
+        (3, $"Travaille directement la demande: {lesson.ExercisePrompt}")
+    ];
 
     private static Chapter Chapter(string title, string description, int sortOrder, int requiredXp, List<Lesson> lessons) =>
         new() { Title = title, Description = description, SortOrder = sortOrder, RequiredXp = requiredXp, Lessons = lessons };
@@ -4153,12 +5767,32 @@ public static class SeedData
 
         if (!await db.Badges.AnyAsync(badge => badge.Slug == "php-first-script"))
         {
-            db.Badges.Add(new Badge { Slug = "php-first-script", Name = "Premier script PHP", Description = "Terminer une premiere lecon PHP/Symfony.", IconName = "code", RuleType = BadgeRuleType.CompleteLessons, RuleValue = 1 });
+            db.Badges.Add(new Badge { Slug = "php-first-script", Name = "Premier script PHP", Description = "Terminer une premiere lecon PHP/Symfony.", IconName = "code", RuleType = BadgeRuleType.CompleteLessonInCourse, RuleValue = 1, RuleCourseLanguage = "php-symfony" });
         }
 
         if (!await db.Badges.AnyAsync(badge => badge.Slug == "symfony-product-builder"))
         {
-            db.Badges.Add(new Badge { Slug = "symfony-product-builder", Name = "Produit Symfony", Description = "Avancer dans le parcours PHP/Symfony.", IconName = "box", RuleType = BadgeRuleType.TotalXp, RuleValue = 250 });
+            db.Badges.Add(new Badge { Slug = "symfony-product-builder", Name = "Produit Symfony", Description = "Avancer dans le parcours PHP/Symfony.", IconName = "box", RuleType = BadgeRuleType.TotalXp, RuleValue = 250, RuleCourseLanguage = "php-symfony" });
+        }
+
+        if (!await db.Badges.AnyAsync(badge => badge.Slug == "sql-first-select"))
+        {
+            db.Badges.Add(new Badge { Slug = "sql-first-select", Name = "Premier SELECT", Description = "Terminer une premiere lecon SQL.", IconName = "database", RuleType = BadgeRuleType.CompleteLessonInCourse, RuleValue = 1, RuleCourseLanguage = "sqlserver" });
+        }
+
+        if (!await db.Badges.AnyAsync(badge => badge.Slug == "csharp-boss-final"))
+        {
+            db.Badges.Add(new Badge { Slug = "csharp-boss-final", Name = "Boss Final C#", Description = "Reussir le boss final C#.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinalInCourse, RuleValue = 1, RuleCourseLanguage = "csharp" });
+        }
+
+        if (!await db.Badges.AnyAsync(badge => badge.Slug == "sql-boss-final"))
+        {
+            db.Badges.Add(new Badge { Slug = "sql-boss-final", Name = "Boss Final SQL", Description = "Reussir le boss final SQL.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinalInCourse, RuleValue = 1, RuleCourseLanguage = "sqlserver" });
+        }
+
+        if (!await db.Badges.AnyAsync(badge => badge.Slug == "php-boss-final"))
+        {
+            db.Badges.Add(new Badge { Slug = "php-boss-final", Name = "Boss Final PHP", Description = "Reussir le boss final PHP/Symfony.", IconName = "trophy", RuleType = BadgeRuleType.CompleteBossFinalInCourse, RuleValue = 1, RuleCourseLanguage = "php-symfony" });
         }
     }
 

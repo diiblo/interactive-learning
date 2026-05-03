@@ -11,7 +11,7 @@ public sealed class RoslynExecutionService
     public async Task<ExecutionResultDto> ExecuteAsync(string code, int timeoutMs = 3000)
     {
         var stopwatch = Stopwatch.StartNew();
-        var syntaxTree = CSharpSyntaxTree.ParseText(code);
+        var syntaxTree = CSharpSyntaxTree.ParseText($"using System;\n{code}");
         var references = AppDomain.CurrentDomain.GetAssemblies()
             .Where(assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
             .Select(assembly => MetadataReference.CreateFromFile(assembly.Location))

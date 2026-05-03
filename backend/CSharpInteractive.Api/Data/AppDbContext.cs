@@ -9,6 +9,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Chapter> Chapters => Set<Chapter>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonTest> LessonTests => Set<LessonTest>();
+    public DbSet<LessonHint> LessonHints => Set<LessonHint>();
+    public DbSet<Skill> Skills => Set<Skill>();
+    public DbSet<LessonSkill> LessonSkills => Set<LessonSkill>();
+    public DbSet<UserSkillProgress> UserSkillProgress => Set<UserSkillProgress>();
     public DbSet<IntermediateBoss> IntermediateBosses => Set<IntermediateBoss>();
     public DbSet<IntermediateBossValidationRule> IntermediateBossValidationRules => Set<IntermediateBossValidationRule>();
     public DbSet<IntermediateBossHint> IntermediateBossHints => Set<IntermediateBossHint>();
@@ -22,6 +26,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     {
         modelBuilder.Entity<Course>().HasIndex(course => course.Slug).IsUnique();
         modelBuilder.Entity<Lesson>().HasIndex(lesson => lesson.Slug).IsUnique();
+        modelBuilder.Entity<Skill>().HasIndex(skill => skill.Slug).IsUnique();
         modelBuilder.Entity<IntermediateBoss>().HasIndex(boss => boss.Slug).IsUnique();
         modelBuilder.Entity<Badge>().HasIndex(badge => badge.Slug).IsUnique();
 
@@ -35,6 +40,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
         modelBuilder.Entity<UserBadge>()
             .HasIndex(userBadge => new { userBadge.UserProfileId, userBadge.BadgeId })
+            .IsUnique();
+
+        modelBuilder.Entity<LessonSkill>().HasKey(item => new { item.LessonId, item.SkillId });
+
+        modelBuilder.Entity<UserSkillProgress>()
+            .HasIndex(progress => new { progress.UserProfileId, progress.SkillId })
             .IsUnique();
 
         modelBuilder.Entity<Course>()
@@ -53,6 +64,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             .HasMany(lesson => lesson.Tests)
             .WithOne(test => test.Lesson)
             .HasForeignKey(test => test.LessonId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Lesson>()
+            .HasMany(lesson => lesson.Hints)
+            .WithOne(hint => hint.Lesson)
+            .HasForeignKey(hint => hint.LessonId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Lesson>()
+            .HasMany(lesson => lesson.LessonSkills)
+            .WithOne(item => item.Lesson)
+            .HasForeignKey(item => item.LessonId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Skill>()
+            .HasMany(skill => skill.LessonSkills)
+            .WithOne(item => item.Skill)
+            .HasForeignKey(item => item.SkillId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Chapter>()

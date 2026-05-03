@@ -11,9 +11,7 @@ namespace CSharpInteractive.Api.Controllers;
 [Route("api/lessons")]
 public sealed class LessonsController(
     AppDbContext db,
-    RoslynExecutionService executionService,
-    LessonCorrectionService correctionService,
-    PhpSymfonyValidationService phpSymfonyValidationService,
+    LearningLanguageService languageService,
     ProgressService progressService) : ControllerBase
 {
     [HttpGet("{lessonId:int}")]
@@ -24,6 +22,9 @@ public sealed class LessonsController(
             .Include(lesson => lesson.Chapter)
             .ThenInclude(chapter => chapter!.Course)
             .Include(lesson => lesson.Tests)
+            .Include(lesson => lesson.Hints)
+            .Include(lesson => lesson.LessonSkills)
+            .ThenInclude(item => item.Skill)
             .FirstOrDefaultAsync(lesson => lesson.Id == lessonId);
         if (lesson is null)
         {
@@ -50,12 +51,7 @@ public sealed class LessonsController(
         }
 
         var lesson = access.Lesson!;
-        if (lesson.Chapter?.Course?.Language == "php-symfony")
-        {
-            return await phpSymfonyValidationService.ValidateAsync(request.Code);
-        }
-
-        return await executionService.ExecuteAsync(request.Code);
+        return await languageService.GetRequiredHandler(lesson).RunAsync(request.Code);
     }
 
     [HttpPost("{lessonId:int}/submit")]
@@ -69,10 +65,8 @@ public sealed class LessonsController(
 
         var profile = await progressService.GetProfileAsync();
         var lesson = access.Lesson!;
-        var correction = lesson.Chapter?.Course?.Language == "php-symfony"
-            ? await phpSymfonyValidationService.SubmitAsync(lesson, request.Code)
-            : await correctionService.SubmitAsync(lesson, request.Code);
-        return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed);
+        var correction = await languageService.GetRequiredHandler(lesson).SubmitAsync(lesson, request.Code);
+        return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed, correction.Execution);
     }
 
     private async Task<(Lesson? Lesson, ActionResult? Error)> GetAccessibleLessonAsync(int lessonId)
@@ -82,6 +76,9 @@ public sealed class LessonsController(
             .Include(lesson => lesson.Chapter)
             .ThenInclude(chapter => chapter!.Course)
             .Include(lesson => lesson.Tests)
+            .Include(lesson => lesson.Hints)
+            .Include(lesson => lesson.LessonSkills)
+            .ThenInclude(item => item.Skill)
             .FirstOrDefaultAsync(lesson => lesson.Id == lessonId);
         if (lesson is null)
         {
@@ -97,12 +94,12 @@ public sealed class LessonsController(
         return (lesson, null);
     }
 
-    private static LessonDetailDto ToDetailDto(Lesson lesson, LessonProgressStatus status) =>
+    private LessonDetailDto ToDetailDto(Lesson lesson, LessonProgressStatus status) =>
         new(
             lesson.Id,
             lesson.Slug,
             lesson.Title,
-            ToEditorLanguage(lesson),
+            languageService.GetRequiredHandler(lesson).EditorLanguage,
             lesson.Objective,
             lesson.ConceptSummary,
             lesson.CommonMistakes,
@@ -112,16 +109,13 @@ public sealed class LessonsController(
             lesson.StarterCode,
             lesson.SuccessFeedback,
             lesson.FailureFeedback,
-            lesson.FinalCorrection,
+            "",
             lesson.XpReward,
             lesson.IsBossFinal,
-            status);
-
-    private static string ToEditorLanguage(Lesson lesson) =>
-        lesson.Chapter?.Course?.Language switch
-        {
-            "sqlserver" => "sql",
-            "php-symfony" => "php",
-            _ => "csharp"
-        };
+            status,
+            lesson.Hints.OrderBy(hint => hint.HintLevel).Select(hint => new LessonHintDto(hint.HintLevel, hint.Content)).ToList(),
+            lesson.LessonSkills
+                .Where(item => item.Skill is not null)
+                .Select(item => new SkillDto(item.Skill!.Id, item.Skill.CourseLanguage, item.Skill.Slug, item.Skill.Name, item.Skill.Description))
+                .ToList());
 }

@@ -71,26 +71,23 @@ Par defaut, le frontend appelle l'API sur `http://localhost:5000/api`. Si l'API 
 NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api npm run dev
 ```
 
-#### Option B - Backend via Docker si `dotnet` n'est pas installe
+#### Option B - Lancement Docker Compose
 
-Utiliser cette option si `dotnet --info` ne fonctionne pas sur la machine, mais que Docker est disponible.
+Utiliser cette option si `dotnet --info` ne fonctionne pas sur la machine, ou pour lancer backend et frontend avec des versions reproductibles.
 
 Depuis la racine du depot :
 
 ```bash
-docker rm -f interactive-learning-api 2>/dev/null || true
-docker create \
-  --name interactive-learning-api \
-  -w /src/CSharpInteractive.Api \
-  -p 5000:5000 \
-  -e ASPNETCORE_URLS=http://0.0.0.0:5000 \
-  mcr.microsoft.com/dotnet/sdk:8.0 \
-  sh -c 'dotnet restore /src/CSharpInteractive.sln && dotnet run --no-restore'
-docker cp backend/. interactive-learning-api:/src
-docker start interactive-learning-api
+docker compose up
 ```
 
-Attendre quelques secondes, puis verifier :
+Le premier lancement peut necessiter internet pour telecharger les images Docker, les packages NuGet et les dependances npm. Ensuite, Compose reutilise les images locales et le cache de build Docker.
+
+Tant que les images Docker et le cache de build ne sont pas supprimes, les lancements suivants evitent de retelcharger les dependances deja presentes. Les images de developpement sont construites depuis `backend/Dockerfile.dev` et `frontend/Dockerfile.dev`, sans montage de dossier local. Apres une modification du code, reconstruire avec `docker compose build` ou `docker compose up --build`.
+
+La base SQLite de l'API est stockee dans le volume Docker `api-data`, afin de conserver la progression entre deux redemarrages de conteneur.
+
+Attendre quelques secondes, puis verifier l'API :
 
 ```bash
 curl -s http://localhost:5000/api/courses
@@ -98,26 +95,36 @@ curl -s http://localhost:5000/api/courses
 
 La reponse doit lister les trois parcours `csharp-foundations`, `sqlserver-foundations` et `php-symfony`.
 
-Dans un deuxieme terminal, lancer le frontend :
-
-```bash
-cd frontend
-npm install
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api npm run dev
-```
-
 Ouvrir ensuite `http://localhost:3000`.
 
-Pour voir les logs du backend Docker :
+Pour lancer en arriere-plan :
 
 ```bash
-docker logs -f interactive-learning-api
+docker compose up -d
 ```
 
-Pour arreter le backend Docker :
+Pour voir les logs :
 
 ```bash
-docker rm -f interactive-learning-api
+docker compose logs -f
+```
+
+Pour arreter sans supprimer les caches :
+
+```bash
+docker compose down
+```
+
+Pour supprimer les conteneurs et reseaux Compose :
+
+```bash
+docker compose down
+```
+
+Pour supprimer aussi la base locale Docker et repartir de zero :
+
+```bash
+docker compose down -v
 ```
 
 ### Lancement rapide apres installation

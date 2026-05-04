@@ -162,12 +162,15 @@ using (var scope = app.Services.CreateScope())
         CREATE INDEX IF NOT EXISTS "IX_UserSkillProgress_SkillId" ON "UserSkillProgress" ("SkillId");
         CREATE UNIQUE INDEX IF NOT EXISTS "IX_UserSkillProgress_UserProfileId_SkillId" ON "UserSkillProgress" ("UserProfileId", "SkillId");
         """);
-    try
+    await db.Database.OpenConnectionAsync();
+    using (var command = db.Database.GetDbConnection().CreateCommand())
     {
-        await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Badges\" ADD COLUMN \"RuleCourseLanguage\" TEXT NULL;");
-    }
-    catch (Exception)
-    {
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Badges') WHERE name = 'RuleCourseLanguage';";
+        var hasRuleCourseLanguageColumn = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+        if (!hasRuleCourseLanguageColumn)
+        {
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"Badges\" ADD COLUMN \"RuleCourseLanguage\" TEXT NULL;");
+        }
     }
     await SeedData.EnsureSeededAsync(db);
 }

@@ -1,0 +1,18 @@
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci --prefer-offline --no-audit
+
+COPY . .
+
+ENV NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start", "--", "--hostname", "0.0.0.0"]

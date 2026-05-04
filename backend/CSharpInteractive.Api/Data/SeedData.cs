@@ -4132,6 +4132,8 @@ public static class SeedData
             await EnsurePhpSymfonyCourseSeededAsync(db);
         }
 
+        await RemoveIntermediateCheckpointLessonsAsync(db);
+        await RefreshExistingLessonGuidanceAsync(db);
         await EnsureIntermediateBossesSeededAsync(db);
         await db.SaveChangesAsync();
         await EnsureLearningMetadataSeededAsync(db);
@@ -5754,7 +5756,54 @@ public static class SeedData
     ];
 
     private static Chapter Chapter(string title, string description, int sortOrder, int requiredXp, List<Lesson> lessons) =>
-        new() { Title = title, Description = description, SortOrder = sortOrder, RequiredXp = requiredXp, Lessons = lessons };
+        new()
+        {
+            Title = title,
+            Description = description,
+            SortOrder = sortOrder,
+            RequiredXp = requiredXp,
+            Lessons = lessons.Where(lesson => !IsIntermediateCheckpointLesson(lesson)).ToList()
+        };
+
+    private static async Task RemoveIntermediateCheckpointLessonsAsync(AppDbContext db)
+    {
+        var lessons = await db.Lessons
+            .Where(lesson => lesson.Slug.EndsWith("-checkpoint") || lesson.Title.StartsWith("Test intermediaire"))
+            .ToListAsync();
+
+        if (lessons.Count == 0)
+        {
+            return;
+        }
+
+        var lessonIds = lessons.Select(lesson => lesson.Id).ToList();
+        var progress = await db.LessonProgress
+            .Where(item => lessonIds.Contains(item.LessonId))
+            .ToListAsync();
+
+        db.LessonProgress.RemoveRange(progress);
+        db.Lessons.RemoveRange(lessons);
+        await db.SaveChangesAsync();
+    }
+
+    private static bool IsIntermediateCheckpointLesson(Lesson lesson) =>
+        lesson.Slug.EndsWith("-checkpoint", StringComparison.OrdinalIgnoreCase)
+        || lesson.Title.StartsWith("Test intermediaire", StringComparison.OrdinalIgnoreCase);
+
+    private static async Task RefreshExistingLessonGuidanceAsync(AppDbContext db)
+    {
+        var lessons = await db.Lessons
+            .Where(lesson => lesson.FinalCorrection != "")
+            .ToListAsync();
+
+        foreach (var lesson in lessons)
+        {
+            lesson.ExampleCode = MakeIllustrativeExample(lesson.Slug, lesson.ExampleCode, lesson.FinalCorrection);
+            lesson.StarterCode = SeparateStarterFromCorrection(lesson.Slug, lesson.StarterCode, lesson.FinalCorrection);
+        }
+
+        await db.SaveChangesAsync();
+    }
 
     private static async Task EnsurePhpSymfonyCourseSeededAsync(AppDbContext db)
     {
@@ -6543,8 +6592,12 @@ public static class SeedData
         string conceptSummary = "",
         string commonMistakes = "",
         string finalCorrection = "",
-        bool isBossFinal = false) =>
-        new()
+        bool isBossFinal = false)
+    {
+        var illustrativeExample = MakeIllustrativeExample(slug, exampleCode, finalCorrection);
+        var separatedStarter = SeparateStarterFromCorrection(slug, starterCode, finalCorrection);
+
+        return new()
         {
             Slug = slug,
             Title = title,
@@ -6554,9 +6607,9 @@ public static class SeedData
                 ? "Verifier le texte exact attendu, les points-virgules et les noms demandes par l'exercice."
                 : commonMistakes,
             Explanation = explanation,
-            ExampleCode = exampleCode,
+            ExampleCode = illustrativeExample,
             ExercisePrompt = exercisePrompt,
-            StarterCode = starterCode,
+            StarterCode = separatedStarter,
             SuccessFeedback = successFeedback,
             FailureFeedback = failureFeedback,
             FinalCorrection = finalCorrection,
@@ -6565,6 +6618,169 @@ public static class SeedData
             IsBossFinal = isBossFinal,
             IsBossPrerequisite = !isBossFinal,
             Tests = tests
+        };
+    }
+
+    private static string MakeIllustrativeExample(string slug, string exampleCode, string finalCorrection)
+    {
+        if (IllustrativeExamples.TryGetValue(slug, out var illustrativeExample))
+        {
+            return illustrativeExample;
+        }
+
+        if (slug.StartsWith("sql-", StringComparison.OrdinalIgnoreCase))
+        {
+            return SqlIllustrativeExample(slug, exampleCode);
+        }
+
+        if (IsTooCloseToCorrection(exampleCode, finalCorrection))
+        {
+            return slug.StartsWith("php-", StringComparison.OrdinalIgnoreCase)
+                ? "<?php\n\n$message = \"Exemple independant\";\necho $message;"
+                : "using System;\n\nConsole.WriteLine(\"Exemple independant\");";
+        }
+
+        return exampleCode;
+    }
+
+    private static string SeparateStarterFromCorrection(string slug, string starterCode, string finalCorrection)
+    {
+        if (!IsTooCloseToCorrection(starterCode, finalCorrection))
+        {
+            return starterCode;
+        }
+
+        if (slug.StartsWith("sql-", StringComparison.OrdinalIgnoreCase))
+        {
+            return "-- Ecris ta requete ici.";
+        }
+
+        if (slug.StartsWith("php-", StringComparison.OrdinalIgnoreCase))
+        {
+            return "<?php\n\n// Ecris ta solution ici.";
+        }
+
+        return "using System;\n\n// Ecris ta solution ici.";
+    }
+
+    private static bool IsTooCloseToCorrection(string candidate, string correction)
+    {
+        if (string.IsNullOrWhiteSpace(candidate) || string.IsNullOrWhiteSpace(correction))
+        {
+            return false;
+        }
+
+        var normalizedCandidate = NormalizePedagogicalCode(candidate);
+        var normalizedCorrection = NormalizePedagogicalCode(correction);
+
+        if (normalizedCandidate == normalizedCorrection)
+        {
+            return true;
+        }
+
+        return normalizedCorrection.Contains(normalizedCandidate, StringComparison.Ordinal)
+            && normalizedCandidate.Length >= Math.Min(80, normalizedCorrection.Length);
+    }
+
+    private static string NormalizePedagogicalCode(string code)
+    {
+        var chars = code.Where(character => !char.IsWhiteSpace(character)).ToArray();
+        return new string(chars).ToUpperInvariant();
+    }
+
+    private static readonly Dictionary<string, string> IllustrativeExamples = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["hello-world"] = "Console.WriteLine(\"Texte de demonstration\");",
+        ["variables"] = "string city = \"Lyon\";\nConsole.WriteLine(\"Ville: \" + city);",
+        ["types"] = "int count = 4;\nstring label = \"Livres\";\nbool available = true;\ndouble price = 12.5;",
+        ["operators"] = "int width = 4;\nint height = 2;\nint area = width * height;\nbool isLarge = area >= 8;",
+        ["foundations-checkpoint"] = "string product = \"Lampe\";\nint subtotal = 20 + 5;\nConsole.WriteLine(product + \" prix \" + subtotal);",
+        ["if-else"] = "int temperature = 12;\nif (temperature < 15) Console.WriteLine(\"Froid\");\nelse Console.WriteLine(\"Doux\");",
+        ["switch"] = "string day = \"lundi\";\nswitch (day) { case \"lundi\": Console.WriteLine(\"Debut\"); break; }",
+        ["for-loop"] = "for (int index = 1; index <= 3; index++) Console.WriteLine(\"Etape \" + index);",
+        ["while-loop"] = "int attempts = 2;\nwhile (attempts > 0) { Console.WriteLine(attempts); attempts--; }",
+        ["foreach-loop"] = "foreach (string color in colors) Console.WriteLine(color);",
+        ["flow-checkpoint"] = "for (int page = 1; page <= 2; page++) if (page == 2) Console.WriteLine(\"Fin\");",
+        ["create-method"] = "static void PrintTitle() { Console.WriteLine(\"Catalogue\"); }\nPrintTitle();",
+        ["method-parameters"] = "static void PrintCity(string city) { Console.WriteLine(city); }\nPrintCity(\"Paris\");",
+        ["return-value"] = "static int Multiply(int left, int right) { return left * right; }",
+        ["scope"] = "static void PrintStatus() { string status = \"Pret\"; Console.WriteLine(status); }",
+        ["overload"] = "static void Show(decimal value) { }\nstatic void Show(DateTime value) { }",
+        ["methods-checkpoint"] = "static int Square(int value) { return value * value; }",
+        ["classes"] = "class Article { public string Title = \"\"; }",
+        ["objects"] = "var article = new Article();",
+        ["properties"] = "public decimal Amount { get; set; } = 0;",
+        ["constructors"] = "public Order(int id) { Id = id; }",
+        ["oop-basics-checkpoint"] = "var ticket = new Ticket(\"A12\", 2);",
+        ["inheritance"] = "class InvoiceLine : DocumentLine { }",
+        ["polymorphism"] = "public virtual string Render() => \"Base\";\npublic override string Render() => \"Detail\";",
+        ["interfaces"] = "interface IExportable { void Export(); }",
+        ["access-modifiers"] = "private int cacheSize;\nprotected bool isLoaded;\npublic string Title { get; set; } = \"\";",
+        ["advanced-oop-checkpoint"] = "ICommand command = new SaveCommand();\ncommand.Execute();",
+        ["arrays"] = "string[] colors = { \"Rouge\", \"Vert\", \"Bleu\" };",
+        ["lists"] = "var cities = new List<string>();\ncities.Add(\"Lyon\");",
+        ["dictionaries"] = "var seats = new Dictionary<string, int>();\nseats[\"A\"] = 12;",
+        ["linq"] = "var recent = years.Where(year => year >= 2020);",
+        ["data-structures-checkpoint"] = "var total = prices.Where(price => price > 0).Sum();",
+        ["try-catch"] = "try { DateTime.Parse(\"x\"); } catch { Console.WriteLine(\"Date invalide\"); }",
+        ["exceptions"] = "throw new InvalidOperationException(\"Operation refusee\");",
+        ["nullables"] = "string? title = null;\nConsole.WriteLine(title ?? \"Sans titre\");",
+        ["errors-checkpoint"] = "string label = optionalLabel ?? \"Non renseigne\";",
+        ["relational-databases"] = "Authors(Id, Name) -> Books(AuthorId)",
+        ["entity-framework-core"] = "db.Orders.Add(order);\nawait db.SaveChangesAsync();",
+        ["dbcontext"] = "class ShopDbContext : DbContext { public DbSet<Order> Orders => Set<Order>(); }",
+        ["crud"] = "Create -> Add, Read -> Query, Update -> Change, Delete -> Remove",
+        ["database-checkpoint"] = "DbContext + DbSet + migrations"
+    };
+
+    private static string SqlIllustrativeExample(string slug, string fallback) =>
+        slug switch
+        {
+            var item when item.Contains("insert", StringComparison.OrdinalIgnoreCase) =>
+                "INSERT INTO Employees (Id, Name, DepartmentId)\nVALUES (10, N'Claire Martin', 2);",
+            var item when item.Contains("update", StringComparison.OrdinalIgnoreCase) =>
+                "UPDATE Employees\nSET DepartmentId = 3\nWHERE Id = 10;",
+            var item when item.Contains("delete", StringComparison.OrdinalIgnoreCase) =>
+                "DELETE FROM DraftMessages\nWHERE CreatedAt < '2026-01-01';",
+            var item when item.Contains("join", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("alias", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT e.Name AS EmployeeName, d.Name AS DepartmentName\nFROM Employees e\nINNER JOIN Departments d ON e.DepartmentId = d.Id;",
+            var item when item.Contains("group", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("having", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("aggregation", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT DepartmentId, COUNT(*) AS EmployeeCount\nFROM Employees\nGROUP BY DepartmentId;",
+            var item when item.Contains("sum", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT SUM(HoursWorked) AS TotalHours\nFROM Timesheets;",
+            var item when item.Contains("avg", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT AVG(Rating) AS AverageRating\nFROM Reviews;",
+            var item when item.Contains("min", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("max", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT MIN(StartDate) AS FirstStart, MAX(StartDate) AS LastStart\nFROM Projects;",
+            var item when item.Contains("transaction", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("rollback", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("modification", StringComparison.OrdinalIgnoreCase) =>
+                "BEGIN TRANSACTION;\nUPDATE Employees SET DepartmentId = 4 WHERE Id = 10;\nCOMMIT;",
+            var item when item.Contains("primary", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("foreign", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("constraint", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("model", StringComparison.OrdinalIgnoreCase) =>
+                "CREATE TABLE Departments (\n    Id int NOT NULL PRIMARY KEY,\n    Name nvarchar(80) NOT NULL\n);",
+            var item when item.Contains("where", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT Title, PublishedYear\nFROM Books\nWHERE PublishedYear >= 2020;",
+            var item when item.Contains("order", StringComparison.OrdinalIgnoreCase) ||
+                          item.Contains("top", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT TOP 3 Title, Rating\nFROM Movies\nORDER BY Rating DESC;",
+            var item when item.Contains("distinct", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT DISTINCT Country\nFROM Customers;",
+            var item when item.Contains("like", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT Title\nFROM Books\nWHERE Title LIKE N'%Guide%';",
+            var item when item.Contains("in", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT Name\nFROM Employees\nWHERE DepartmentId IN (2, 4);",
+            var item when item.Contains("between", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT Title\nFROM Movies\nWHERE Rating BETWEEN 7 AND 9;",
+            _ when slug.StartsWith("sql-", StringComparison.OrdinalIgnoreCase) =>
+                "SELECT Name, CreatedAt\nFROM Employees;",
+            _ => fallback
         };
 
     private static LessonTest Output(string name, string expectedOutput) =>

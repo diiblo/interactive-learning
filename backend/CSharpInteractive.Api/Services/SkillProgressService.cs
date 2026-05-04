@@ -68,13 +68,16 @@ public sealed class SkillProgressService(AppDbContext db)
         }
 
         var skillIds = due.Select(item => item.SkillId).ToList();
-        var suggestions = await db.LessonSkills
+        var suggestionRows = await db.LessonSkills
             .AsNoTracking()
             .Include(item => item.Lesson)
             .Include(item => item.Skill)
             .Where(item => skillIds.Contains(item.SkillId))
+            .ToListAsync();
+
+        var suggestions = suggestionRows
             .GroupBy(item => item.SkillId)
-            .ToDictionaryAsync(
+            .ToDictionary(
                 group => group.Key,
                 group => group.OrderBy(item => item.Lesson!.ChapterId)
                     .ThenBy(item => item.Lesson!.SortOrder)
@@ -327,14 +330,14 @@ public sealed class SkillProgressService(AppDbContext db)
             return SubmissionErrorCategory.ForbiddenSnippetUsed;
         }
 
-        if (message.Contains("doit contenir", StringComparison.OrdinalIgnoreCase))
-        {
-            return SubmissionErrorCategory.MissingRequiredSnippet;
-        }
-
         if (message.Contains("sortie", StringComparison.OrdinalIgnoreCase) || message.Contains("resultat", StringComparison.OrdinalIgnoreCase))
         {
             return SubmissionErrorCategory.WrongOutput;
+        }
+
+        if (message.Contains("doit contenir", StringComparison.OrdinalIgnoreCase))
+        {
+            return SubmissionErrorCategory.MissingRequiredSnippet;
         }
 
         return failedTests.Count > 0 ? SubmissionErrorCategory.PartialSolution : SubmissionErrorCategory.Unknown;

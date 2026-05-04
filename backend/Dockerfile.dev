@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+WORKDIR /src
+
+COPY CSharpInteractive.sln ./
+COPY CSharpInteractive.Api/CSharpInteractive.Api.csproj CSharpInteractive.Api/
+COPY CSharpInteractive.Api.Tests/CSharpInteractive.Api.Tests.csproj CSharpInteractive.Api.Tests/
+
+RUN dotnet restore CSharpInteractive.sln --ignore-failed-sources
+
+COPY . .
+
+WORKDIR /src/CSharpInteractive.Api
+
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://0.0.0.0:5000
+
+EXPOSE 5000
+
+CMD ["dotnet", "run", "--no-restore", "--urls", "http://0.0.0.0:5000"]

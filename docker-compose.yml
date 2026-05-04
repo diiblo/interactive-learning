@@ -1,0 +1,34 @@
+name: interactive-learning
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    image: interactive-learning-api:dev
+    container_name: interactive-learning-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:5000
+      ConnectionStrings__DefaultConnection: Data Source=/data/interactive-learning.db
+    ports:
+      - "5000:5000"
+    volumes:
+      - api-data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    image: interactive-learning-frontend:dev
+    container_name: interactive-learning-frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  api-data:

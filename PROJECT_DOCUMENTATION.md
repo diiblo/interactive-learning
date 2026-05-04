@@ -408,14 +408,21 @@ dotnet restore
 dotnet run
 ```
 
-Backend via Docker:
+Lancement complet via Docker Compose:
 
 ```bash
-docker rm -f interactive-learning-api
-docker create --name interactive-learning-api -w /src/CSharpInteractive.Api -p 5000:5000 -e ASPNETCORE_URLS=http://0.0.0.0:5000 mcr.microsoft.com/dotnet/sdk:8.0 sh -c 'dotnet restore /src/CSharpInteractive.sln && dotnet run --no-restore'
-docker cp backend/. interactive-learning-api:/src
-docker start interactive-learning-api
+docker compose up
 ```
+
+Ce mode lance l'API et le frontend avec des conteneurs standards:
+
+- API: image locale `interactive-learning-api:dev`, construite depuis `backend/Dockerfile.dev`, port `5000`;
+- frontend: image locale `interactive-learning-frontend:dev`, construite depuis `frontend/Dockerfile.dev`, port `3000`;
+- dependances NuGet et npm installees pendant le build Docker;
+- pas de bind mount requis entre l'hote et les conteneurs;
+- base SQLite conservee dans le volume Docker `api-data`.
+
+Le premier lancement peut avoir besoin d'internet pour telecharger les images Docker et remplir les caches de dependances. Apres ce premier lancement, le projet peut redemarrer hors ligne si les images locales et le cache de build Docker sont conserves. Apres une modification du code, reconstruire avec `docker compose build` ou `docker compose up --build`.
 
 Frontend:
 

@@ -1,0 +1,10 @@
+bin/
+obj/
+node_modules/
+legacy-express/node_modules/
+*.db
+*.db-shm
+*.db-wal
+.git/
+.vs/
+.vscode/

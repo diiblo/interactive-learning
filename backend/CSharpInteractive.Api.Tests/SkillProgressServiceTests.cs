@@ -36,6 +36,37 @@ public sealed class SkillProgressServiceTests
     }
 
     [Fact]
+    public async Task SeedData_KeepsExamplesAndStartersSeparateFromCorrections()
+    {
+        await using var db = CreateDbContext();
+        await SeedData.EnsureSeededAsync(db);
+
+        var lessons = await db.Lessons
+            .Where(lesson => lesson.FinalCorrection != "")
+            .ToListAsync();
+
+        Assert.All(lessons, lesson =>
+        {
+            Assert.False(IsTooCloseToCorrection(lesson.ExampleCode, lesson.FinalCorrection), $"{lesson.Slug} example is too close to the correction.");
+            Assert.False(IsTooCloseToCorrection(lesson.StarterCode, lesson.FinalCorrection), $"{lesson.Slug} starter code exposes the correction.");
+        });
+    }
+
+    [Fact]
+    public async Task SeedData_DoesNotExposeIntermediateCheckpointLessons()
+    {
+        await using var db = CreateDbContext();
+        await SeedData.EnsureSeededAsync(db);
+
+        var checkpoints = await db.Lessons
+            .Where(lesson => lesson.Slug.EndsWith("-checkpoint") || lesson.Title.StartsWith("Test intermediaire"))
+            .Select(lesson => lesson.Slug)
+            .ToListAsync();
+
+        Assert.Empty(checkpoints);
+    }
+
+    [Fact]
     public void InferSkillSlugs_FallsBackWhenPlanMissing()
     {
         var course = new Course { Language = "sqlserver" };
@@ -95,7 +126,7 @@ public sealed class SkillProgressServiceTests
 
         var due = await service.GetDueReviewsAsync(profile);
 
-        var item = Assert.Single(due.Where(item => item.SkillSlug == "csharp-console-output"));
+        var item = Assert.Single(due, item => item.SkillSlug == "csharp-console-output");
         Assert.Equal(SkillProgressStatus.ReviewDue, item.Status);
         Assert.NotEmpty(item.SuggestedLessonSlugs);
     }
@@ -167,7 +198,7 @@ public sealed class SkillProgressServiceTests
             [new TestResultDto("Output", false, "La sortie attendue doit contenir: Hello")],
             false,
             new ExecutionResultDto(true, "", [], 1),
-            "using System; Console.WriteLine(\"Hi\");");
+            "using System; Console.WriteLine(\"Hi\"); Console.WriteLine(\"There\");");
 
         Assert.Equal(SubmissionErrorCategory.WrongOutput, feedback.ErrorCategory);
     }
@@ -237,6 +268,31 @@ public sealed class SkillProgressServiceTests
         var profile = await db.UserProfiles.FirstAsync();
         var lesson = await db.Lessons.FirstAsync(item => item.Slug == "hello-world");
         return (new SkillProgressService(db), profile, lesson);
+    }
+
+    private static bool IsTooCloseToCorrection(string candidate, string correction)
+    {
+        if (string.IsNullOrWhiteSpace(candidate) || string.IsNullOrWhiteSpace(correction))
+        {
+            return false;
+        }
+
+        var normalizedCandidate = NormalizeCode(candidate);
+        var normalizedCorrection = NormalizeCode(correction);
+
+        if (normalizedCandidate == normalizedCorrection)
+        {
+            return true;
+        }
+
+        return normalizedCorrection.Contains(normalizedCandidate, StringComparison.Ordinal)
+            && normalizedCandidate.Length >= Math.Min(80, normalizedCorrection.Length);
+    }
+
+    private static string NormalizeCode(string code)
+    {
+        var chars = code.Where(character => !char.IsWhiteSpace(character)).ToArray();
+        return new string(chars).ToUpperInvariant();
     }
 
     private static AppDbContext CreateDbContext()

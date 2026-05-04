@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Play, Send, Loader2, AlertTriangle } from "lucide-react";
+import { Play, Send, Loader2, AlertTriangle, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { findFirstAvailableLesson, findLessonInMap } from "@/lib/lesson-state";
 import type {
@@ -67,6 +67,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
   const [sqlColumns, setSqlColumns] = useState<string[]>([]);
   const [sqlRows, setSqlRows] = useState<Record<string, string | number | boolean | null>[]>([]);
   const [lastSubmit, setLastSubmit] = useState<SubmitResultDto | null>(null);
+  const [isInfoPanelCollapsed, setIsInfoPanelCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -182,7 +183,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
       setIntermediateBoss(null);
       setCode("");
     }
-  }, [loadLesson, refreshSkillProgress]);
+  }, [loadLesson, refreshReviewQueue, refreshSkillProgress]);
 
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -361,7 +362,13 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
           onSelectIntermediateBoss={loadIntermediateBoss}
         />
 
-        <section className="grid min-h-0 flex-1 grid-rows-[minmax(220px,36%)_1fr] md:grid-cols-[minmax(280px,36%)_1fr_280px] md:grid-rows-1">
+        <section
+          className={`grid min-h-0 flex-1 grid-rows-[minmax(220px,36%)_1fr] md:grid-rows-1 ${
+            isInfoPanelCollapsed
+              ? "md:grid-cols-[minmax(280px,36%)_1fr_48px]"
+              : "md:grid-cols-[minmax(280px,34%)_1fr_360px]"
+          }`}
+        >
           <div className="min-h-0 border-b border-[var(--color-border)] bg-[var(--color-surface)] md:border-b-0 md:border-r">
             {intermediateBoss ? <IntermediateBossContent boss={intermediateBoss} /> : <LessonContent lesson={lesson} />}
           </div>
@@ -381,6 +388,17 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsInfoPanelCollapsed((value) => !value)}
+                  className="hidden items-center gap-2 rounded-md border border-[var(--color-border)] bg-[#1e2329] px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-primary)] md:inline-flex"
+                  aria-label={isInfoPanelCollapsed ? "Afficher le panneau d'informations" : "Replier le panneau d'informations"}
+                  aria-expanded={!isInfoPanelCollapsed}
+                  title={isInfoPanelCollapsed ? "Afficher le panneau d'informations" : "Replier le panneau d'informations"}
+                >
+                  {isInfoPanelCollapsed ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
+                  Infos
+                </button>
                 <button
                   type="button"
                   onClick={runCode}
@@ -415,28 +433,60 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
             </div>
           </div>
 
-          <div className="hidden min-h-0 flex-col md:flex">
-            <FeedbackPanel result={lastSubmit} />
-            <IntermediateBossHelp
-              boss={intermediateBoss}
-              result={lastSubmit}
-              hints={intermediateBossHints}
-              solution={intermediateBossSolution}
-              isBusy={isRunning}
-              onRevealHint={revealIntermediateBossHint}
-              onRevealSolution={revealIntermediateBossSolution}
-            />
-            {activeEditorLanguage === "sql" ? <SqlSchemaPanel schema={sqlSchema} /> : null}
-            <div className="space-y-3 border-l border-t border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-              <LessonUnlockCard unlockedCount={lastSubmit?.unlockedLessonIds.length ?? 0} />
-              <XpLevelCard profile={profile} />
-              <BadgeGrid badges={profile?.badges ?? []} />
-            </div>
-            <ReviewQueue
-              reviews={reviewQueue}
-              onReview={(skillSlug, lessonSlug) => void reviewSkill(lessonSlug, reviewSkillIdMap.current.get(skillSlug))}
-            />
-            <SkillMap skills={skillProgress} onReview={(lessonSlug, skillId) => void reviewSkill(lessonSlug, skillId)} />
+          <div className="hidden min-h-0 border-l border-[var(--color-border)] bg-[var(--color-surface)] md:flex">
+            {isInfoPanelCollapsed ? (
+              <div className="flex h-full w-full flex-col items-center border-l border-[var(--color-border)] bg-[#161b22] py-3">
+                <button
+                  type="button"
+                  onClick={() => setIsInfoPanelCollapsed(false)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] bg-[#1e2329] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-white"
+                  aria-label="Afficher le panneau d'informations"
+                  aria-expanded={!isInfoPanelCollapsed}
+                  title="Afficher le panneau d'informations"
+                >
+                  <PanelRightOpen size={18} />
+                </button>
+              </div>
+            ) : (
+              <aside className="flex min-h-0 w-full flex-col">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[#161b22] px-4 py-3">
+                  <p className="text-sm font-semibold text-white">Informations</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsInfoPanelCollapsed(true)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-border)] bg-[#1e2329] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-white"
+                    aria-label="Replier le panneau d'informations"
+                    aria-expanded={!isInfoPanelCollapsed}
+                    title="Replier le panneau d'informations"
+                  >
+                    <PanelRightClose size={17} />
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <FeedbackPanel result={lastSubmit} />
+                  <IntermediateBossHelp
+                    boss={intermediateBoss}
+                    result={lastSubmit}
+                    hints={intermediateBossHints}
+                    solution={intermediateBossSolution}
+                    isBusy={isRunning}
+                    onRevealHint={revealIntermediateBossHint}
+                    onRevealSolution={revealIntermediateBossSolution}
+                  />
+                  {activeEditorLanguage === "sql" ? <SqlSchemaPanel schema={sqlSchema} /> : null}
+                  <div className="space-y-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                    <LessonUnlockCard unlockedCount={lastSubmit?.unlockedLessonIds.length ?? 0} />
+                    <XpLevelCard profile={profile} />
+                    <BadgeGrid badges={profile?.badges ?? []} />
+                  </div>
+                  <ReviewQueue
+                    reviews={reviewQueue}
+                    onReview={(skillSlug, lessonSlug) => void reviewSkill(lessonSlug, reviewSkillIdMap.current.get(skillSlug))}
+                  />
+                  <SkillMap skills={skillProgress} onReview={(lessonSlug, skillId) => void reviewSkill(lessonSlug, skillId)} />
+                </div>
+              </aside>
+            )}
           </div>
         </section>
       </main>

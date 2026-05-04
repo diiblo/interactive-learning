@@ -6736,50 +6736,112 @@ public static class SeedData
     private static string SqlIllustrativeExample(string slug, string fallback) =>
         slug switch
         {
-            var item when item.Contains("insert", StringComparison.OrdinalIgnoreCase) =>
-                "INSERT INTO Employees (Id, Name, DepartmentId)\nVALUES (10, N'Claire Martin', 2);",
-            var item when item.Contains("update", StringComparison.OrdinalIgnoreCase) =>
-                "UPDATE Employees\nSET DepartmentId = 3\nWHERE Id = 10;",
-            var item when item.Contains("delete", StringComparison.OrdinalIgnoreCase) =>
-                "DELETE FROM DraftMessages\nWHERE CreatedAt < '2026-01-01';",
-            var item when item.Contains("join", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("alias", StringComparison.OrdinalIgnoreCase) =>
-                "SELECT e.Name AS EmployeeName, d.Name AS DepartmentName\nFROM Employees e\nINNER JOIN Departments d ON e.DepartmentId = d.Id;",
-            var item when item.Contains("group", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("having", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("aggregation", StringComparison.OrdinalIgnoreCase) =>
-                "SELECT DepartmentId, COUNT(*) AS EmployeeCount\nFROM Employees\nGROUP BY DepartmentId;",
-            var item when item.Contains("sum", StringComparison.OrdinalIgnoreCase) =>
-                "SELECT SUM(HoursWorked) AS TotalHours\nFROM Timesheets;",
-            var item when item.Contains("avg", StringComparison.OrdinalIgnoreCase) =>
-                "SELECT AVG(Rating) AS AverageRating\nFROM Reviews;",
-            var item when item.Contains("min", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("max", StringComparison.OrdinalIgnoreCase) =>
-                "SELECT MIN(StartDate) AS FirstStart, MAX(StartDate) AS LastStart\nFROM Projects;",
-            var item when item.Contains("transaction", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("rollback", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("modification", StringComparison.OrdinalIgnoreCase) =>
-                "BEGIN TRANSACTION;\nUPDATE Employees SET DepartmentId = 4 WHERE Id = 10;\nCOMMIT;",
-            var item when item.Contains("primary", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("foreign", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("constraint", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("model", StringComparison.OrdinalIgnoreCase) =>
-                "CREATE TABLE Departments (\n    Id int NOT NULL PRIMARY KEY,\n    Name nvarchar(80) NOT NULL\n);",
-            var item when item.Contains("where", StringComparison.OrdinalIgnoreCase) =>
+            "sql-relational-database" =>
+                "SELECT Title\nFROM Books;",
+            "sql-tables-rows-columns" =>
+                "SELECT Title, Author, PublishedYear\nFROM Books;",
+            "sql-server-data-types" =>
+                "SELECT Title, PublishedYear, Price, IsAvailable\nFROM Books;",
+            "sql-select" =>
+                "SELECT Title, Price\nFROM Books;",
+            "sql-where" =>
                 "SELECT Title, PublishedYear\nFROM Books\nWHERE PublishedYear >= 2020;",
-            var item when item.Contains("order", StringComparison.OrdinalIgnoreCase) ||
-                          item.Contains("top", StringComparison.OrdinalIgnoreCase) =>
+            "sql-foundations-checkpoint" =>
+                "SELECT Title, Price, Stock\nFROM Books\nWHERE IsAvailable = 1 AND Price < 25;",
+            "sql-order-by" =>
+                "SELECT Title, Rating\nFROM Movies\nORDER BY Rating DESC;",
+            "sql-top" =>
                 "SELECT TOP 3 Title, Rating\nFROM Movies\nORDER BY Rating DESC;",
-            var item when item.Contains("distinct", StringComparison.OrdinalIgnoreCase) =>
+            "sql-distinct" =>
                 "SELECT DISTINCT Country\nFROM Customers;",
-            var item when item.Contains("like", StringComparison.OrdinalIgnoreCase) =>
+            "sql-like" =>
                 "SELECT Title\nFROM Books\nWHERE Title LIKE N'%Guide%';",
-            var item when item.Contains("in", StringComparison.OrdinalIgnoreCase) =>
+            "sql-in" =>
                 "SELECT Name\nFROM Employees\nWHERE DepartmentId IN (2, 4);",
-            var item when item.Contains("between", StringComparison.OrdinalIgnoreCase) =>
-                "SELECT Title\nFROM Movies\nWHERE Rating BETWEEN 7 AND 9;",
+            "sql-between" =>
+                "SELECT Title, Rating\nFROM Movies\nWHERE Rating BETWEEN 7 AND 9;",
+            "sql-is-null" =>
+                "SELECT Title, ArchivedAt\nFROM Books\nWHERE ArchivedAt IS NULL;",
+            "sql-filtering-checkpoint" =>
+                "SELECT Title, Price\nFROM Books\nWHERE Price BETWEEN 10 AND 30 AND Title LIKE N'%SQL%';",
+            "sql-count" =>
+                "SELECT COUNT(*) AS EmployeeCount\nFROM Employees;",
+            "sql-sum" =>
+                "SELECT SUM(HoursWorked) AS TotalHours\nFROM Timesheets;",
+            "sql-avg" =>
+                "SELECT AVG(Rating) AS AverageRating\nFROM Reviews;",
+            "sql-min-max" =>
+                "SELECT MIN(StartDate) AS FirstStart, MAX(StartDate) AS LastStart\nFROM Projects;",
+            "sql-group-by" =>
+                "SELECT DepartmentId, COUNT(*) AS EmployeeCount\nFROM Employees\nGROUP BY DepartmentId;",
+            "sql-having" =>
+                "SELECT DepartmentId, COUNT(*) AS EmployeeCount\nFROM Employees\nGROUP BY DepartmentId\nHAVING COUNT(*) >= 3;",
+            "sql-aggregation-checkpoint" =>
+                "SELECT DepartmentId, SUM(HoursWorked) AS TotalHours\nFROM Timesheets\nGROUP BY DepartmentId\nHAVING SUM(HoursWorked) > 100;",
+            "sql-inner-join" =>
+                "SELECT e.Name AS EmployeeName, d.Name AS DepartmentName\nFROM Employees e\nINNER JOIN Departments d ON e.DepartmentId = d.Id;",
+            "sql-left-join" =>
+                "SELECT d.Name AS DepartmentName, e.Name AS EmployeeName\nFROM Departments d\nLEFT JOIN Employees e ON e.DepartmentId = d.Id\nORDER BY d.Name;",
+            "sql-right-join" =>
+                "SELECT e.Name AS EmployeeName, d.Name AS DepartmentName\nFROM Employees e\nRIGHT JOIN Departments d ON e.DepartmentId = d.Id\nORDER BY d.Name;",
+            "sql-full-outer-join" =>
+                "SELECT crm.Email AS CrmEmail, newsletter.Email AS NewsletterEmail\nFROM CrmContacts crm\nFULL OUTER JOIN NewsletterSubscribers newsletter ON crm.Email = newsletter.Email;",
+            "sql-table-aliases" =>
+                "SELECT e.Name AS EmployeeName, d.Name AS DepartmentName\nFROM Employees e\nINNER JOIN Departments d ON e.DepartmentId = d.Id;",
+            "sql-joins-checkpoint" =>
+                "SELECT o.Id AS OrderId, c.Name AS CustomerName, o.Total\nFROM Orders o\nINNER JOIN Customers c ON o.CustomerId = c.Id;",
+            "sql-insert" =>
+                "INSERT INTO Employees (Id, Name, DepartmentId)\nVALUES (10, N'Claire Martin', 2);",
+            "sql-update" =>
+                "UPDATE Employees\nSET DepartmentId = 3\nWHERE Id = 10;",
+            "sql-delete" =>
+                "DELETE FROM DraftMessages\nWHERE CreatedAt < '2026-01-01';",
+            "sql-simple-transaction" =>
+                "BEGIN TRANSACTION;\nUPDATE Accounts SET Balance = Balance - 20 WHERE Id = 1;\nUPDATE Accounts SET Balance = Balance + 20 WHERE Id = 2;\nCOMMIT;",
+            "sql-rollback-commit" =>
+                "BEGIN TRANSACTION;\nUPDATE Orders SET Status = N'Cancelled' WHERE Id = 42;\nROLLBACK;",
+            "sql-modification-checkpoint" =>
+                "BEGIN TRANSACTION;\nINSERT INTO AuditLog (Message) VALUES (N'Stock corrige');\nUPDATE Products SET Stock = Stock + 5 WHERE Id = 3;\nCOMMIT;",
+            "sql-primary-keys" =>
+                "CREATE TABLE Departments (\n    Id int NOT NULL PRIMARY KEY,\n    Name nvarchar(80) NOT NULL\n);",
+            "sql-foreign-keys" =>
+                "CREATE TABLE Employees (\n    Id int NOT NULL PRIMARY KEY,\n    DepartmentId int NOT NULL,\n    CONSTRAINT FK_Employees_Departments FOREIGN KEY (DepartmentId) REFERENCES Departments(Id)\n);",
+            "sql-constraints" =>
+                "CREATE TABLE Rooms (\n    Code nvarchar(20) NOT NULL UNIQUE,\n    Capacity int NOT NULL CHECK (Capacity > 0)\n);",
+            "sql-simple-normalization" =>
+                "SELECT b.Title AS BookTitle, a.Name AS AuthorName\nFROM Books b\nINNER JOIN Authors a ON b.AuthorId = a.Id;",
+            "sql-relationships" =>
+                "SELECT s.Name AS SupplierName, p.Name AS ProductName\nFROM Suppliers s\nINNER JOIN Products p ON p.SupplierId = s.Id;",
+            "sql-modeling-checkpoint" =>
+                "CREATE TABLE Enrollments (\n    StudentId int NOT NULL,\n    CourseId int NOT NULL,\n    CONSTRAINT PK_Enrollments PRIMARY KEY (StudentId, CourseId)\n);",
+            "sql-indexes" =>
+                "CREATE INDEX IX_Books_Title\nON Books(Title);\n\nSELECT Title\nFROM Books\nWHERE Title = N'SQL Essentials';",
+            "sql-views" =>
+                "CREATE VIEW AvailableBooks\nAS\nSELECT Title, Price\nFROM Books\nWHERE IsAvailable = 1;\n\nSELECT Title, Price\nFROM AvailableBooks;",
+            "sql-stored-procedures" =>
+                "CREATE PROCEDURE GetAvailableBooks\nAS\nSELECT Title\nFROM Books\nWHERE IsAvailable = 1;\n\nEXEC GetAvailableBooks;",
+            "sql-functions" =>
+                "CREATE FUNCTION dbo.PriceWithTax (@price decimal(10,2))\nRETURNS decimal(10,2)\nAS\nBEGIN\n    RETURN @price * 1.20\nEND;",
+            "sql-tsql-variables" =>
+                "DECLARE @minimumRating decimal(3,1);\nSET @minimumRating = 4.5;\nSELECT Title\nFROM Books\nWHERE Rating >= @minimumRating;",
+            "sql-advanced-checkpoint" =>
+                "CREATE VIEW LowStockBooks\nAS\nSELECT Title, Stock\nFROM Books\nWHERE Stock < 5;\n\nSELECT Title, Stock\nFROM LowStockBooks;",
+            "sql-complete-schema" =>
+                "CREATE TABLE Customers (\n    Id int NOT NULL PRIMARY KEY,\n    Email nvarchar(120) NOT NULL UNIQUE\n);\n\nCREATE TABLE Orders (\n    Id int NOT NULL PRIMARY KEY,\n    CustomerId int NOT NULL,\n    CONSTRAINT FK_Orders_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(Id)\n);",
+            "sql-create-project-tables" =>
+                "CREATE TABLE Customers (\n    Id int NOT NULL PRIMARY KEY,\n    Name nvarchar(80) NOT NULL\n);\n\nCREATE TABLE Orders (\n    Id int NOT NULL PRIMARY KEY,\n    CustomerId int NOT NULL\n);",
+            "sql-seed-project-data" =>
+                "INSERT INTO Customers (Id, Name)\nVALUES (1, N'Ada Lovelace');\n\nINSERT INTO Orders (Id, CustomerId)\nVALUES (1, 1);",
+            "sql-business-queries" =>
+                "SELECT o.Id AS OrderId, c.Name AS CustomerName, p.Name AS ProductName\nFROM Orders o\nINNER JOIN Customers c ON o.CustomerId = c.Id\nINNER JOIN OrderItems oi ON oi.OrderId = o.Id\nINNER JOIN Products p ON oi.ProductId = p.Id;",
+            "sql-simple-optimization" =>
+                "CREATE INDEX IX_Orders_CustomerId\nON Orders(CustomerId);\n\nSELECT Id\nFROM Orders\nWHERE CustomerId = 1;",
+            "sql-project-checkpoint" =>
+                "SELECT o.Id AS OrderId, c.Name AS CustomerName, SUM(oi.Quantity * oi.UnitPrice) AS OrderTotal\nFROM Orders o\nINNER JOIN Customers c ON o.CustomerId = c.Id\nINNER JOIN OrderItems oi ON oi.OrderId = o.Id\nGROUP BY o.Id, c.Name;",
+            "sql-boss-final-ecommerce" =>
+                "SELECT c.Name AS CustomerName, SUM(oi.Quantity * oi.UnitPrice) AS TotalSpent\nFROM Customers c\nINNER JOIN Orders o ON o.CustomerId = c.Id\nINNER JOIN OrderItems oi ON oi.OrderId = o.Id\nGROUP BY c.Name\nHAVING SUM(oi.Quantity * oi.UnitPrice) >= 50;",
             _ when slug.StartsWith("sql-", StringComparison.OrdinalIgnoreCase) =>
-                "SELECT Name, CreatedAt\nFROM Employees;",
+                fallback,
             _ => fallback
         };
 

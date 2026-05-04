@@ -1,16 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CheckCircle, CircleX, Sparkles } from "lucide-react";
 import type { SubmitResultDto } from "@/types/api";
 
 export function FeedbackPanel({ result }: { result: SubmitResultDto | null }) {
-  const [revealedHints, setRevealedHints] = useState(1);
-
-  useEffect(() => {
-    setRevealedHints(1);
-  }, [result]);
-
   if (!result) {
     return (
       <aside className="border-l border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm text-[var(--color-text-muted)]">
@@ -18,6 +12,14 @@ export function FeedbackPanel({ result }: { result: SubmitResultDto | null }) {
       </aside>
     );
   }
+
+  const resultKey = `${result.passed}-${result.feedback}-${result.testResults.map((test) => `${test.name}:${test.passed}`).join("|")}`;
+
+  return <FeedbackPanelResult key={resultKey} result={result} />;
+}
+
+function FeedbackPanelResult({ result }: { result: SubmitResultDto }) {
+  const [revealedHints, setRevealedHints] = useState(1);
 
   const structured = result.structuredFeedback;
   const hints = structured?.progressiveHints ?? [];

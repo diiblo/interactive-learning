@@ -153,6 +153,15 @@ export type ExecutionResultDto = {
   rows?: Record<string, string | number | boolean | null>[];
 };
 
+export type AiProviderConfigDto = {
+  id: string;
+  type: string;
+  name: string;
+  apiKey: string;
+  model: string;
+  baseUrl?: string | null;
+};
+
 export type SqlColumnSchemaDto = {
   name: string;
   type: string;

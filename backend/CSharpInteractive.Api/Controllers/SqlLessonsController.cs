@@ -13,7 +13,8 @@ public sealed class SqlLessonsController(
     AppDbContext db,
     SqlExecutionService executionService,
     LearningLanguageService languageService,
-    ProgressService progressService) : ControllerBase
+    ProgressService progressService,
+    AiValidationService aiValidationService) : ControllerBase
 {
     [HttpGet("schema")]
     public ActionResult<SqlSchemaDto> GetSchema() => executionService.GetSchema();
@@ -46,7 +47,7 @@ public sealed class SqlLessonsController(
     }
 
     [HttpPost("{lessonId:int}/submit")]
-    public async Task<ActionResult<SubmitResultDto>> Submit(int lessonId, CodeRequest request)
+    public async Task<ActionResult<SubmitResultDto>> Submit(int lessonId, SubmitCodeRequest request)
     {
         var access = await GetAccessibleSqlLessonAsync(lessonId);
         if (access.Error is not null)
@@ -56,6 +57,14 @@ public sealed class SqlLessonsController(
 
         var profile = await progressService.GetProfileAsync();
         var lesson = access.Lesson!;
+        if (string.Equals(request.ValidationMode, "ai", StringComparison.OrdinalIgnoreCase))
+        {
+            var aiResult = await aiValidationService.ValidateLessonAsync(lesson, request.Code, request.AiProviders);
+            var tests = new[] { new TestResultDto($"Validation IA ({aiResult.ProviderName})", aiResult.Passed, aiResult.Feedback) };
+            var execution = new ExecutionResultDto(aiResult.Passed, aiResult.Feedback, [], 0);
+            return await progressService.CompleteLessonAsync(profile, lesson, request.Code, aiResult.Feedback, tests, aiResult.Passed, execution, AiSubmissionFeedbackFactory.Create(aiResult));
+        }
+
         var correction = await languageService.GetRequiredHandler(lesson).SubmitAsync(lesson, request.Code);
         return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed, correction.Execution);
     }

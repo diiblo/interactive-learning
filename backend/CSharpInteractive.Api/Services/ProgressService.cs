@@ -38,6 +38,19 @@ public sealed class ProgressService(AppDbContext db, UnlockService unlockService
         bool passed,
         ExecutionResultDto? execution = null)
     {
+        return await CompleteLessonAsync(profile, lesson, code, output, tests, passed, execution, null);
+    }
+
+    public async Task<SubmitResultDto> CompleteLessonAsync(
+        UserProfile profile,
+        Lesson lesson,
+        string code,
+        string output,
+        IReadOnlyList<TestResultDto> tests,
+        bool passed,
+        ExecutionResultDto? execution,
+        SubmissionFeedbackDto? feedbackOverride)
+    {
         var progress = await db.LessonProgress.FirstOrDefaultAsync(item => item.UserProfileId == profile.Id && item.LessonId == lesson.Id);
         if (progress is null)
         {
@@ -70,7 +83,8 @@ public sealed class ProgressService(AppDbContext db, UnlockService unlockService
         }
 
         await db.SaveChangesAsync();
-        var structuredFeedback = await skillProgressService.UpdateAfterLessonSubmissionAsync(profile, lesson, tests, passed, execution ?? new ExecutionResultDto(passed, output, [], 0), code);
+        var structuredFeedback = feedbackOverride
+            ?? await skillProgressService.UpdateAfterLessonSubmissionAsync(profile, lesson, tests, passed, execution ?? new ExecutionResultDto(passed, output, [], 0), code);
         var unlocked = passed ? await unlockService.RefreshUnlocksAsync(profile) : [];
         var earnedBadges = passed ? await AwardBadgesAsync(profile, lesson) : [];
 

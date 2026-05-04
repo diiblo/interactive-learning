@@ -10,7 +10,8 @@ public sealed class IntermediateBossService(
     LearningLanguageService languageService,
     ProgressService progressService,
     UnlockService unlockService,
-    SkillProgressService skillProgressService)
+    SkillProgressService skillProgressService,
+    AiValidationService aiValidationService)
 {
     public Task<ExecutionResultDto> RunAsync(IntermediateBoss boss, string code) =>
         languageService.GetRequiredHandler(boss).RunAsync(code);
@@ -73,6 +74,65 @@ public sealed class IntermediateBossService(
         var bossResult = await skillProgressService.BuildBossResultAsync(profile, boss, results, passed);
 
         return new SubmitResultDto(passed, execution.Output, results, feedback, xpEarned, profile.Level, unlocked, [], BossResult: bossResult);
+    }
+
+    public async Task<SubmitResultDto> SubmitWithAiAsync(UserProfile profile, IntermediateBoss boss, string code, IReadOnlyList<AiProviderConfigDto>? providers)
+    {
+        var aiResult = await aiValidationService.ValidateIntermediateBossAsync(boss, code, providers);
+        var execution = new ExecutionResultDto(aiResult.Passed, aiResult.Feedback, [], 0);
+        var results = new List<TestResultDto>
+        {
+            new($"Validation IA ({aiResult.ProviderName})", aiResult.Passed, aiResult.Feedback)
+        };
+
+        var passed = aiResult.Passed;
+        var progress = await GetOrCreateProgressAsync(profile, boss);
+        progress.Attempts += 1;
+        progress.LastOutput = aiResult.Feedback;
+
+        var xpEarned = 0;
+        if (passed)
+        {
+            progress.Status = LessonProgressStatus.Completed;
+            progress.BestCode = code;
+            progress.CompletedAt ??= DateTime.UtcNow;
+
+            if (progress.EarnedXp == 0)
+            {
+                xpEarned = boss.XpReward;
+                progress.EarnedXp = boss.XpReward;
+                profile.TotalXp += xpEarned;
+                profile.Level = progressService.CalculateLevel(profile.TotalXp);
+                profile.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+        else
+        {
+            progress.FailedAttempts += 1;
+            if (progress.Status == LessonProgressStatus.Available)
+            {
+                progress.Status = LessonProgressStatus.Started;
+            }
+        }
+
+        await db.SaveChangesAsync();
+        var unlocked = passed ? await unlockService.RefreshUnlocksAsync(profile) : [];
+        var feedback = passed
+            ? "Monstre vaincu avec validation IA. Le module suivant peut maintenant etre deverrouille."
+            : "La validation IA refuse encore la reponse. Corrige le point indique, puis retente.";
+        var bossResult = await skillProgressService.BuildBossResultAsync(profile, boss, results, passed);
+
+        return new SubmitResultDto(
+            passed,
+            execution.Output,
+            results,
+            feedback,
+            xpEarned,
+            profile.Level,
+            unlocked,
+            [],
+            AiSubmissionFeedbackFactory.Create(aiResult),
+            bossResult);
     }
 
     public async Task<IntermediateBossHintResultDto> RevealNextHintAsync(UserProfile profile, IntermediateBoss boss)

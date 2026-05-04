@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Play, Send, Loader2, AlertTriangle, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Play, Send, Loader2, AlertTriangle, PanelRightClose, PanelRightOpen, Settings, Plus, Trash2, Bot } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { findFirstAvailableLesson, findLessonInMap } from "@/lib/lesson-state";
 import type {
+  AiProviderConfigDto,
   CourseMapDto,
   CourseSummaryDto,
   ExecutionResultDto,
@@ -43,8 +44,34 @@ type AppShellProps = {
   initialBossFinal?: boolean;
 };
 
+type ValidationMode = "local" | "ai";
+
+const AI_PROVIDERS_STORAGE_KEY = "interactive-learning.aiProviders";
+const VALIDATION_MODE_STORAGE_KEY = "interactive-learning.validationMode";
+
+const providerDefaults: Record<string, { name: string; model: string; baseUrl: string }> = {
+  google: { name: "Google Gemini", model: "gemini-1.5-flash", baseUrl: "" },
+  openrouter: { name: "OpenRouter", model: "openai/gpt-4o-mini", baseUrl: "https://openrouter.ai/api/v1" },
+  "ollama-cloud": { name: "Ollama Cloud", model: "llama3.1", baseUrl: "" },
+  "ollama-local": { name: "Ollama local", model: "llama3.1", baseUrl: "http://host.docker.internal:11434" },
+  custom: { name: "Compatible OpenAI", model: "gpt-4o-mini", baseUrl: "" },
+};
+
 function initialEditorCode(language: string) {
   return language === "csharp" ? "using System;\n\n// Ecris ton code ici\n" : "";
+}
+
+function createAiProvider(type = "openrouter"): AiProviderConfigDto {
+  const defaults = providerDefaults[type] ?? providerDefaults.openrouter;
+  const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  return {
+    id,
+    type,
+    name: defaults.name,
+    apiKey: "",
+    model: defaults.model,
+    baseUrl: defaults.baseUrl,
+  };
 }
 
 export function AppShell({ initialLessonId, initialBossFinal = false }: AppShellProps) {
@@ -68,6 +95,9 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
   const [sqlRows, setSqlRows] = useState<Record<string, string | number | boolean | null>[]>([]);
   const [lastSubmit, setLastSubmit] = useState<SubmitResultDto | null>(null);
   const [isInfoPanelCollapsed, setIsInfoPanelCollapsed] = useState(false);
+  const [validationMode, setValidationMode] = useState<ValidationMode>("local");
+  const [aiProviders, setAiProviders] = useState<AiProviderConfigDto[]>([]);
+  const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +244,33 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     void loadInitialData();
   }, [loadInitialData]);
 
+  useEffect(() => {
+    try {
+      const storedMode = localStorage.getItem(VALIDATION_MODE_STORAGE_KEY);
+      if (storedMode === "local" || storedMode === "ai") {
+        setValidationMode(storedMode);
+      }
+
+      const storedProviders = localStorage.getItem(AI_PROVIDERS_STORAGE_KEY);
+      if (storedProviders) {
+        const parsed = JSON.parse(storedProviders) as AiProviderConfigDto[];
+        if (Array.isArray(parsed)) {
+          setAiProviders(parsed);
+        }
+      }
+    } catch {
+      setAiProviders([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(VALIDATION_MODE_STORAGE_KEY, validationMode);
+  }, [validationMode]);
+
+  useEffect(() => {
+    localStorage.setItem(AI_PROVIDERS_STORAGE_KEY, JSON.stringify(aiProviders));
+  }, [aiProviders]);
+
   const runCode = async () => {
     if (!lesson && !intermediateBoss) {
       return;
@@ -254,13 +311,22 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     setError(null);
 
     try {
+      if (validationMode === "ai" && aiProviders.length === 0) {
+        setIsAiSettingsOpen(true);
+        throw new Error("Ajoute au moins un fournisseur IA avant de soumettre avec l'IA.");
+      }
+
+      const submitOptions = {
+        validationMode,
+        aiProviders: validationMode === "ai" ? aiProviders : [],
+      };
       const result = intermediateBoss
-        ? await apiClient.submitIntermediateBoss(intermediateBoss.id, code)
+        ? await apiClient.submitIntermediateBoss(intermediateBoss.id, code, submitOptions)
         : lesson!.editorLanguage === "sql"
-          ? await apiClient.submitSqlLesson(lesson!.id, code)
+          ? await apiClient.submitSqlLesson(lesson!.id, code, submitOptions)
           : lesson!.isBossFinal && lesson!.editorLanguage === "csharp"
-            ? await apiClient.submitBossFinal(code)
-            : await apiClient.submitLesson(lesson!.id, code);
+            ? await apiClient.submitBossFinal(code, submitOptions)
+            : await apiClient.submitLesson(lesson!.id, code, submitOptions);
       setLastSubmit(result);
       setOutput(result.output);
       setSqlColumns([]);
@@ -279,6 +345,26 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     } finally {
       setIsRunning(false);
     }
+  };
+
+  const updateAiProvider = (id: string, patch: Partial<AiProviderConfigDto>) => {
+    setAiProviders((providers) =>
+      providers.map((provider) => {
+        if (provider.id !== id) {
+          return provider;
+        }
+
+        const nextType = patch.type ?? provider.type;
+        const defaults = providerDefaults[nextType] ?? providerDefaults.custom;
+        return {
+          ...provider,
+          ...patch,
+          name: patch.type ? defaults.name : patch.name ?? provider.name,
+          model: patch.type ? defaults.model : patch.model ?? provider.model,
+          baseUrl: patch.type ? defaults.baseUrl : patch.baseUrl ?? provider.baseUrl,
+        };
+      }),
+    );
   };
 
   const reviewSkill = async (lessonSlug: string | null, skillId?: number) => {
@@ -388,6 +474,36 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <div className="hidden rounded-md border border-[var(--color-border)] bg-[#1e2329] p-1 md:flex">
+                  <button
+                    type="button"
+                    onClick={() => setValidationMode("local")}
+                    className={`rounded px-2 py-1 text-xs font-semibold transition ${
+                      validationMode === "local" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:text-white"
+                    }`}
+                  >
+                    Local
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setValidationMode("ai")}
+                    className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold transition ${
+                      validationMode === "ai" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:text-white"
+                    }`}
+                  >
+                    <Bot size={13} />
+                    IA
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAiSettingsOpen(true)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] bg-[#1e2329] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-white"
+                  aria-label="Configurer la validation IA"
+                  title="Configurer la validation IA"
+                >
+                  <Settings size={16} />
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsInfoPanelCollapsed((value) => !value)}
@@ -490,6 +606,132 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
           </div>
         </section>
       </main>
+
+      {isAiSettingsOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
+          <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-[var(--color-border)] bg-[#161b22] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Validation IA</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Les cles restent dans ce navigateur et sont essayees dans l'ordre.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAiSettingsOpen(false)}
+                className="rounded-md border border-[var(--color-border)] bg-[#1e2329] px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-primary)]"
+              >
+                Fermer
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setValidationMode("local")}
+                className={`rounded-md px-3 py-2 text-sm font-semibold transition ${
+                  validationMode === "local" ? "bg-[var(--color-primary)] text-white" : "border border-[var(--color-border)] bg-[#1e2329] text-[var(--color-text-muted)] hover:text-white"
+                }`}
+              >
+                Code local
+              </button>
+              <button
+                type="button"
+                onClick={() => setValidationMode("ai")}
+                className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition ${
+                  validationMode === "ai" ? "bg-[var(--color-primary)] text-white" : "border border-[var(--color-border)] bg-[#1e2329] text-[var(--color-text-muted)] hover:text-white"
+                }`}
+              >
+                <Bot size={16} />
+                IA
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiProviders((providers) => [...providers, createAiProvider()])}
+                className="ml-auto inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[#1e2329] px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-primary)]"
+              >
+                <Plus size={16} />
+                Ajouter
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+              {aiProviders.length === 0 ? (
+                <div className="rounded-md border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
+                  Aucun fournisseur configure. Ajoute Google, OpenRouter, Ollama Cloud, Ollama local ou une API compatible OpenAI.
+                </div>
+              ) : null}
+
+              {aiProviders.map((provider, index) => (
+                <div key={provider.id} className="rounded-md border border-[var(--color-border)] bg-[#0d1117] p-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-white">Priorite {index + 1}</p>
+                    <button
+                      type="button"
+                      onClick={() => setAiProviders((providers) => providers.filter((item) => item.id !== provider.id))}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-border)] bg-[#1e2329] text-[var(--color-text-muted)] transition hover:border-[var(--color-error)] hover:text-white"
+                      aria-label="Supprimer ce fournisseur"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="text-xs font-semibold text-[var(--color-text-muted)]">
+                      Fournisseur
+                      <select
+                        value={provider.type}
+                        onChange={(event) => updateAiProvider(provider.id, { type: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[#161b22] px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-primary)]"
+                      >
+                        <option value="google">Google Gemini</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="ollama-cloud">Ollama Cloud</option>
+                        <option value="ollama-local">Ollama local</option>
+                        <option value="custom">Compatible OpenAI</option>
+                      </select>
+                    </label>
+                    <label className="text-xs font-semibold text-[var(--color-text-muted)]">
+                      Nom
+                      <input
+                        value={provider.name}
+                        onChange={(event) => updateAiProvider(provider.id, { name: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[#161b22] px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-primary)]"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-[var(--color-text-muted)]">
+                      Modele
+                      <input
+                        value={provider.model}
+                        onChange={(event) => updateAiProvider(provider.id, { model: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[#161b22] px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-primary)]"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-[var(--color-text-muted)]">
+                      Cle API
+                      <input
+                        type="password"
+                        value={provider.apiKey}
+                        onChange={(event) => updateAiProvider(provider.id, { apiKey: event.target.value })}
+                        placeholder={provider.type === "ollama-local" ? "Optionnel" : "sk-..."}
+                        className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[#161b22] px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-primary)]"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-[var(--color-text-muted)] md:col-span-2">
+                      URL API
+                      <input
+                        value={provider.baseUrl ?? ""}
+                        onChange={(event) => updateAiProvider(provider.id, { baseUrl: event.target.value })}
+                        placeholder="Utilise l'URL par defaut si vide"
+                        className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[#161b22] px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-primary)]"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {(isLoading || error) && (
         <div className="fixed bottom-4 left-4 rounded-md border border-[var(--color-border)] bg-[#161b22] px-4 py-3 text-sm shadow-lg">

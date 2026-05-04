@@ -37,6 +37,7 @@ builder.Services.AddScoped<UnlockService>();
 builder.Services.AddScoped<CourseCatalogService>();
 builder.Services.AddScoped<SkillProgressService>();
 builder.Services.AddScoped<LearningLanguageService>();
+builder.Services.AddHttpClient<AiValidationService>();
 builder.Services.AddScoped<ILearningLanguageHandler, CSharpLearningLanguageHandler>();
 builder.Services.AddScoped<ILearningLanguageHandler, SqlServerLearningLanguageHandler>();
 builder.Services.AddScoped<ILearningLanguageHandler, PhpSymfonyLearningLanguageHandler>();

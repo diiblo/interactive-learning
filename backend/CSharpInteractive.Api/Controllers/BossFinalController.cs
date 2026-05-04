@@ -12,7 +12,8 @@ namespace CSharpInteractive.Api.Controllers;
 public sealed class BossFinalController(
     AppDbContext db,
     LearningLanguageService languageService,
-    ProgressService progressService) : ControllerBase
+    ProgressService progressService,
+    AiValidationService aiValidationService) : ControllerBase
 {
     [HttpPost("run")]
     public async Task<ActionResult<ExecutionResultDto>> Run(CodeRequest request)
@@ -27,7 +28,7 @@ public sealed class BossFinalController(
     }
 
     [HttpPost("submit")]
-    public async Task<ActionResult<SubmitResultDto>> Submit(CodeRequest request)
+    public async Task<ActionResult<SubmitResultDto>> Submit(SubmitCodeRequest request)
     {
         var access = await GetAccessibleBossAsync();
         if (access.Error is not null)
@@ -37,6 +38,14 @@ public sealed class BossFinalController(
 
         var profile = await progressService.GetProfileAsync();
         var lesson = access.Lesson!;
+        if (string.Equals(request.ValidationMode, "ai", StringComparison.OrdinalIgnoreCase))
+        {
+            var aiResult = await aiValidationService.ValidateLessonAsync(lesson, request.Code, request.AiProviders);
+            var tests = new[] { new TestResultDto($"Validation IA ({aiResult.ProviderName})", aiResult.Passed, aiResult.Feedback) };
+            var execution = new ExecutionResultDto(aiResult.Passed, aiResult.Feedback, [], 0);
+            return await progressService.CompleteLessonAsync(profile, lesson, request.Code, aiResult.Feedback, tests, aiResult.Passed, execution, AiSubmissionFeedbackFactory.Create(aiResult));
+        }
+
         var correction = await languageService.GetRequiredHandler(lesson).SubmitAsync(lesson, request.Code);
         return await progressService.CompleteLessonAsync(profile, lesson, request.Code, correction.Execution.Output, correction.Tests, correction.Passed, correction.Execution);
     }

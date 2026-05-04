@@ -23,7 +23,7 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex JoinRegex = new(
-        @"^\s*SELECT\s+(?<columns>.+?)\s+FROM\s+Products\s+(?<productAlias>\w+)\s+(?<join>INNER|LEFT|RIGHT|FULL\s+OUTER)\s+JOIN\s+Categories\s+(?<categoryAlias>\w+)\s+ON\s+(?<on>.+?)(?:\s+ORDER\s+BY\s+(?<order>(?:\w+\.)?\w+)(?:\s+(?<direction>ASC|DESC))?)?\s*;?\s*$",
+        @"^\s*SELECT\s+(?:TOP\s+(?<top>\d+)\s+)?(?<columns>.+?)\s+FROM\s+Products\s+(?<productAlias>\w+)\s+(?<join>INNER|LEFT|RIGHT|FULL\s+OUTER)\s+JOIN\s+Categories\s+(?<categoryAlias>\w+)\s+ON\s+(?<on>.+?)(?:\s+WHERE\s+(?<where>.*?))?(?:\s+ORDER\s+BY\s+(?<order>(?:\w+\.)?\w+)(?:\s+(?<direction>ASC|DESC))?)?\s*;?\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public async Task<SqlQueryResult> ExecuteQueryAsync(string query)
@@ -378,18 +378,20 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
             }
         }
 
-        var selected = ParseJoinColumns(match.Groups["columns"].Value, joinedRows.FirstOrDefault());
+        var filteredRows = joinedRows.Where(row => MatchesWhere(row, match.Groups["where"].Value)).ToList();
+        var selected = ParseJoinColumns(match.Groups["columns"].Value, filteredRows.FirstOrDefault());
         if (selected.Count == 0)
         {
             return new SqlQueryResult(false, "", ["Colonnes de jointure non supportees."], 0, [], []);
         }
 
-        var projectedRows = joinedRows.Select(row =>
+        var projectedRows = filteredRows.Select(row =>
             selected.ToDictionary(column => column.OutputName, column => row.TryGetValue(column.SourceName, out var value) ? value : "", StringComparer.OrdinalIgnoreCase) as IReadOnlyDictionary<string, object>)
             .ToList();
         var orderedRows = ApplyOrderBy(projectedRows, ResolveOrderColumn(match.Groups["order"].Value, selected), match.Groups["direction"].Value);
+        var limitedRows = ApplyTop(orderedRows, match.Groups["top"].Value);
         var columns = selected.Select(column => column.OutputName).ToList();
-        return new SqlQueryResult(true, FormatRows(columns, orderedRows), [], 0, columns, orderedRows);
+        return new SqlQueryResult(true, FormatRows(columns, limitedRows), [], 0, columns, limitedRows);
     }
 
     private static IReadOnlyDictionary<string, object> PrefixJoinRow(string productAlias, IReadOnlyDictionary<string, object>? product, string categoryAlias, IReadOnlyDictionary<string, object>? category)
@@ -417,7 +419,7 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
 
     private static JoinColumn? ParseJoinColumn(string expression, IReadOnlyDictionary<string, object>? sampleRow)
     {
-        var match = Regex.Match(expression, @"^(?<source>\w+\.\w+)(?:\s+AS\s+(?<alias>\w+))?$", RegexOptions.IgnoreCase);
+        var match = Regex.Match(expression, @"^(?<source>(?:\w+\.)?\w+)(?:\s+AS\s+(?<alias>\w+))?$", RegexOptions.IgnoreCase);
         if (!match.Success)
         {
             return null;
@@ -426,10 +428,18 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
         var source = match.Groups["source"].Value;
         if (sampleRow is not null && !sampleRow.ContainsKey(source))
         {
-            return null;
+            var matchingKeys = sampleRow.Keys
+                .Where(key => string.Equals(key.Split('.')[^1], source, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matchingKeys.Count != 1)
+            {
+                return null;
+            }
+
+            source = matchingKeys[0];
         }
 
-        var output = match.Groups["alias"].Success ? match.Groups["alias"].Value : source.Split('.')[1];
+        var output = match.Groups["alias"].Success ? match.Groups["alias"].Value : source.Split('.')[^1];
         return new JoinColumn(source, output);
     }
 
@@ -592,7 +602,7 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
 
     private static bool MatchesCondition(IReadOnlyDictionary<string, object> row, string condition)
     {
-        var isNullMatch = Regex.Match(condition, @"^(?<column>\w+)\s+IS\s+(?<not>NOT\s+)?NULL$", RegexOptions.IgnoreCase);
+        var isNullMatch = Regex.Match(condition, @"^(?<column>(?:\w+\.)?\w+)\s+IS\s+(?<not>NOT\s+)?NULL$", RegexOptions.IgnoreCase);
         if (isNullMatch.Success)
         {
             var nullColumn = isNullMatch.Groups["column"].Value;
@@ -601,7 +611,7 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
             return isNotNull ? !isNull : isNull;
         }
 
-        var betweenMatch = Regex.Match(condition, @"^(?<column>\w+)\s+BETWEEN\s+(?<min>N?'[^']*'|\d+(?:\.\d+)?)\s+AND\s+(?<max>N?'[^']*'|\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase);
+        var betweenMatch = Regex.Match(condition, @"^(?<column>(?:\w+\.)?\w+)\s+BETWEEN\s+(?<min>N?'[^']*'|\d+(?:\.\d+)?)\s+AND\s+(?<max>N?'[^']*'|\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase);
         if (betweenMatch.Success)
         {
             var betweenColumn = betweenMatch.Groups["column"].Value;
@@ -616,7 +626,7 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
             return betweenActualNumber >= min && betweenActualNumber <= max;
         }
 
-        var inMatch = Regex.Match(condition, @"^(?<column>\w+)\s+IN\s*\((?<values>.+)\)$", RegexOptions.IgnoreCase);
+        var inMatch = Regex.Match(condition, @"^(?<column>(?:\w+\.)?\w+)\s+IN\s*\((?<values>.+)\)$", RegexOptions.IgnoreCase);
         if (inMatch.Success)
         {
             var inColumn = inMatch.Groups["column"].Value;
@@ -631,7 +641,7 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
             return values.Any(value => string.Equals(Convert.ToString(inActual, CultureInfo.InvariantCulture), Convert.ToString(value, CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase));
         }
 
-        var likeMatch = Regex.Match(condition, @"^(?<column>\w+)\s+LIKE\s+(?<pattern>N?'[^']*')$", RegexOptions.IgnoreCase);
+        var likeMatch = Regex.Match(condition, @"^(?<column>(?:\w+\.)?\w+)\s+LIKE\s+(?<pattern>N?'[^']*')$", RegexOptions.IgnoreCase);
         if (likeMatch.Success)
         {
             var likeColumn = likeMatch.Groups["column"].Value;
@@ -645,7 +655,7 @@ public sealed class SqlExecutionService(SqlSafetyService safetyService, IOptions
             return Regex.IsMatch(Convert.ToString(likeActual, CultureInfo.InvariantCulture) ?? "", regex, RegexOptions.IgnoreCase);
         }
 
-        var match = Regex.Match(condition, @"^(?<column>\w+)\s*(?<op>=|>=|<=|>|<)\s*(?<value>N?'[^']*'|\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase);
+        var match = Regex.Match(condition, @"^(?<column>(?:\w+\.)?\w+)\s*(?<op>=|>=|<=|>|<)\s*(?<value>N?'[^']*'|\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase);
         if (!match.Success)
         {
             return false;

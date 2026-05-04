@@ -135,6 +135,26 @@ public sealed class SqlExecutionServiceTests
         Assert.Contains("C# Basics\tBooks", result.Output);
     }
 
+    [Fact]
+    public async Task ExecuteQueryAsync_AppliesTopWhereAndUnqualifiedColumnsInJoin()
+    {
+        var service = CreateService();
+
+        var result = await service.ExecuteQueryAsync("""
+            SELECT TOP 4 p.Name AS ProductName, c.Name AS CategoryName, Price
+            FROM Products p
+            INNER JOIN Categories c ON p.CategoryId = c.Id
+            WHERE p.IsActive = 1
+            ORDER BY p.Price DESC;
+            """);
+
+        Assert.True(result.Success);
+        Assert.Equal(["ProductName", "CategoryName", "Price"], result.Columns);
+        Assert.Equal(4, result.Rows.Count);
+        Assert.Contains("Mechanical Keyboard\tHardware\t89.99", result.Output);
+        Assert.Contains("SQL Server Guide\tBooks\t34.50", result.Output);
+    }
+
     private static SqlExecutionService CreateService() =>
         new(new SqlSafetyService(), OptionsFactory.Create(new SqlLearningOptions()));
 }

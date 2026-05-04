@@ -40,7 +40,7 @@ public sealed class IntermediateBossesController(
     }
 
     [HttpPost("{bossId:int}/submit")]
-    public async Task<ActionResult<SubmitResultDto>> Submit(int bossId, CodeRequest request)
+    public async Task<ActionResult<SubmitResultDto>> Submit(int bossId, SubmitCodeRequest request)
     {
         var access = await GetAccessibleBossAsync(bossId);
         if (access.Error is not null)
@@ -48,7 +48,9 @@ public sealed class IntermediateBossesController(
             return access.Error;
         }
 
-        return await intermediateBossService.SubmitAsync(access.Profile!, access.Boss!, request.Code);
+        return string.Equals(request.ValidationMode, "ai", StringComparison.OrdinalIgnoreCase)
+            ? await intermediateBossService.SubmitWithAiAsync(access.Profile!, access.Boss!, request.Code, request.AiProviders)
+            : await intermediateBossService.SubmitAsync(access.Profile!, access.Boss!, request.Code);
     }
 
     [HttpPost("{bossId:int}/hint")]

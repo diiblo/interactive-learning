@@ -2637,7 +2637,7 @@ public static class SeedData
                             "Combiner jointure, alias et filtre pour produire un resultat metier.",
                             "Une requete utile relie les tables, nomme clairement les colonnes et filtre les lignes qui interessent l'utilisateur.",
                             "SELECT p.Name AS ProductName, c.Name AS CategoryName, p.Price\nFROM Products p\nINNER JOIN Categories c ON p.CategoryId = c.Id\nWHERE p.IsActive = 1\nORDER BY p.Price DESC;",
-                            "Affiche les produits actifs avec leur categorie et leur prix, du plus cher au moins cher.",
+                            "Affiche tous les produits actifs avec leur categorie et leur prix, du plus cher au moins cher. Ne limite pas la requete a quelques noms: Mechanical Keyboard et SQL Server Guide doivent apparaitre parmi les quatre lignes.",
                             """
                             SELECT p.Name AS ProductName, c.Name AS CategoryName, p.Price
                             FROM Products p
@@ -2655,9 +2655,9 @@ public static class SeedData
                                 Required("Filtre les actifs", "p.IsActive = 1"),
                                 Required("Trie par prix", "ORDER BY p.Price DESC"),
                                 SqlColumns("Retourne ProductName, CategoryName, Price", "ProductName,CategoryName,Price"),
-                                SqlRows("Retourne quatre produits actifs", 4),
-                                Output("Contient Mechanical Keyboard", "Mechanical Keyboard"),
-                                Output("Contient SQL Server Guide", "SQL Server Guide")
+                                SqlRows("Retourne les quatre produits actifs", 4),
+                                Output("Mechanical Keyboard apparait dans les resultats", "Mechanical Keyboard"),
+                                Output("SQL Server Guide apparait dans les resultats", "SQL Server Guide")
                             ],
                             conceptSummary: "JOIN transforme des identifiants techniques en informations lisibles.",
                             finalCorrection:
@@ -2677,7 +2677,7 @@ public static class SeedData
                             "Ajouter une nouvelle ligne dans une table.",
                             "INSERT INTO indique la table et les colonnes a remplir. VALUES fournit les valeurs dans le meme ordre.",
                             "INSERT INTO Products (Id, Name, CategoryId, Price, Stock, IsActive)\nVALUES (6, N'Learning Mug', 1, 14.90, 12, 1);",
-                            "Ajoute le produit Learning Mug puis affiche la ligne ajoutee.",
+                            "Ajoute dans Products le produit Id 6, Name N'Learning Mug', CategoryId 1, Price 14.90, Stock 12, IsActive 1, puis affiche Name, Price et Stock de la ligne ajoutee avec WHERE Id = 6.",
                             """
                             INSERT INTO Products (Id, Name, CategoryId, Price, Stock, IsActive)
                             VALUES (6, N'Learning Mug', 1, 14.90, 12, 1);
@@ -2687,12 +2687,15 @@ public static class SeedData
                             WHERE Id = 6;
                             """,
                             "Le nouveau produit est insere et verifie.",
-                            "Utilise INSERT INTO Products puis un SELECT de verification sur Id = 6.",
+                            "Utilise INSERT INTO Products avec les colonnes Id, Name, CategoryId, Price, Stock, IsActive et les valeurs 6, N'Learning Mug', 1, 14.90, 12, 1, puis un SELECT de verification sur Id = 6.",
                             45,
                             1,
                             [
                                 Required("Utilise INSERT", "INSERT INTO Products"),
                                 Required("Ajoute Learning Mug", "Learning Mug"),
+                                Required("Utilise l'Id 6", "6"),
+                                Required("Utilise le prix 14.90", "14.90"),
+                                Required("Utilise le stock 12", "12"),
                                 Required("Verifie avec SELECT", "SELECT"),
                                 SqlColumns("Retourne Name, Price, Stock", "Name,Price,Stock"),
                                 SqlRows("Retourne une ligne", 1),
@@ -2920,7 +2923,7 @@ public static class SeedData
                             "Identifier chaque ligne avec une cle primaire stable.",
                             "Une cle primaire rend chaque ligne unique. Elle sert de reference pour retrouver ou relier une donnee.",
                             "CREATE TABLE Suppliers (\n    Id int NOT NULL PRIMARY KEY,\n    Name nvarchar(80) NOT NULL\n);",
-                            "Cree la table Suppliers avec Id comme cle primaire, insere un fournisseur, puis affiche Id et Name.",
+                            "Cree la table Suppliers avec Id comme cle primaire et Name nvarchar(80) NOT NULL. Insere le fournisseur Id 1, Name N'Northwind Supply', puis affiche Id et Name avec WHERE Id = 1.",
                             """
                             CREATE TABLE Suppliers (
                                 Id int NOT NULL PRIMARY KEY,
@@ -2935,7 +2938,7 @@ public static class SeedData
                             WHERE Id = 1;
                             """,
                             "La table possede une cle primaire et une ligne identifiable.",
-                            "Utilise PRIMARY KEY sur Id, puis verifie avec SELECT Id, Name.",
+                            "Utilise PRIMARY KEY sur Id, insere (1, N'Northwind Supply'), puis verifie avec SELECT Id, Name WHERE Id = 1.",
                             50,
                             1,
                             [
@@ -2967,7 +2970,7 @@ public static class SeedData
                             "Relier deux tables avec une contrainte de reference.",
                             "Une cle etrangere stocke l'identifiant d'une ligne d'une autre table. SQL Server verifie que la reference existe.",
                             "CONSTRAINT FK_SupplierProducts_Products FOREIGN KEY (ProductId) REFERENCES Products(Id)",
-                            "Cree Suppliers et SupplierProducts, relie SupplierProducts a Products et Suppliers, puis affiche le lien insere.",
+                            "Cree Suppliers et SupplierProducts. Insere Suppliers (1, N'Northwind Supply'), relie SupplierId 1 au ProductId 2 dans SupplierProducts, puis affiche SupplierId et ProductId.",
                             """
                             CREATE TABLE Suppliers (
                                 Id int NOT NULL PRIMARY KEY,
@@ -2992,7 +2995,7 @@ public static class SeedData
                             FROM SupplierProducts;
                             """,
                             "Les deux references sont valides et le lien est lisible.",
-                            "Ajoute deux FOREIGN KEY: une vers Suppliers(Id), une vers Products(Id).",
+                            "Ajoute deux FOREIGN KEY: SupplierId vers Suppliers(Id), ProductId vers Products(Id). Insere le lien (SupplierId 1, ProductId 2).",
                             55,
                             2,
                             [
@@ -3035,7 +3038,7 @@ public static class SeedData
                             "Utiliser NOT NULL, UNIQUE et CHECK pour proteger les donnees.",
                             "Les contraintes de table refusent les donnees invalides avant qu'elles n'entrent dans la base.",
                             "Code nvarchar(10) NOT NULL UNIQUE,\nCapacity int NOT NULL CHECK (Capacity > 0)",
-                            "Cree Warehouses avec un code unique et une capacite positive, insere une ligne, puis affiche Code et Capacity.",
+                            "Cree Warehouses avec Id PRIMARY KEY, Code nvarchar(10) NOT NULL UNIQUE et Capacity int NOT NULL CHECK (Capacity > 0). Insere (1, N'WH-A', 120), puis affiche Code et Capacity avec WHERE Code = N'WH-A'.",
                             """
                             CREATE TABLE Warehouses (
                                 Id int NOT NULL PRIMARY KEY,
@@ -3051,7 +3054,7 @@ public static class SeedData
                             WHERE Code = N'WH-A';
                             """,
                             "La structure refuse les codes dupliques et les capacites invalides.",
-                            "Utilise NOT NULL, UNIQUE et CHECK (Capacity > 0).",
+                            "Utilise NOT NULL, UNIQUE et CHECK (Capacity > 0), puis insere WH-A avec Capacity 120.",
                             50,
                             3,
                             [
@@ -3117,7 +3120,7 @@ public static class SeedData
                             "Modeliser une relation directe et une table de liaison.",
                             "Une relation 1-N utilise une cle etrangere dans la table enfant. Une relation N-N passe par une table de liaison avec deux cles etrangeres.",
                             "Products -> Categories est 1-N. SupplierProducts relie Suppliers et Products en N-N.",
-                            "Cree un fournisseur et une table de liaison SupplierProducts, puis affiche le fournisseur et le produit relie.",
+                            "Cree Suppliers et SupplierProducts. Insere Suppliers (1, N'Northwind Supply'), relie SupplierId 1 au ProductId 4, puis affiche SupplierName et ProductName avec des JOIN.",
                             """
                             CREATE TABLE Suppliers (
                                 Id int NOT NULL PRIMARY KEY,
@@ -3144,7 +3147,7 @@ public static class SeedData
                             INNER JOIN Products p ON sp.ProductId = p.Id;
                             """,
                             "La table de liaison materialise la relation N-N.",
-                            "Utilise SupplierProducts avec deux FOREIGN KEY et deux JOIN de lecture.",
+                            "Utilise SupplierProducts avec deux FOREIGN KEY, insere le lien (1, 4), puis fais deux JOIN de lecture vers Suppliers et Products.",
                             60,
                             5,
                             [
@@ -3189,7 +3192,7 @@ public static class SeedData
                             "Construire un petit schema relationnel avec relation N-N.",
                             "Un modele relationnel complet combine cles primaires, cles etrangeres, table de liaison et requete de verification.",
                             "CREATE TABLE Students (...);\nCREATE TABLE Courses (...);\nCREATE TABLE StudentCourses (...);",
-                            "Cree Students, Courses et StudentCourses, inscris Ada au cours SQL Server, puis affiche StudentName et CourseTitle.",
+                            "Cree Students, Courses et StudentCourses. Insere Students (1, N'Ada'), Courses (1, N'SQL Server'), inscris StudentId 1 au CourseId 1, puis affiche StudentName et CourseTitle.",
                             """
                             CREATE TABLE Students (
                                 Id int NOT NULL PRIMARY KEY,
@@ -3224,7 +3227,7 @@ public static class SeedData
                             INNER JOIN Courses c ON sc.CourseId = c.Id;
                             """,
                             "Module SQL 6 valide. Tu sais creer un schema relationnel simple.",
-                            "Combine trois tables, cles primaires, deux cles etrangeres et une requete JOIN finale.",
+                            "Combine trois tables, cles primaires, deux cles etrangeres, les insertions Ada / SQL Server et une requete JOIN finale.",
                             80,
                             6,
                             [
@@ -3607,7 +3610,7 @@ public static class SeedData
                             "Creer les tables dans le bon ordre pour respecter les dependances.",
                             "On cree d'abord les tables parentes, puis les tables enfants qui contiennent des cles etrangeres.",
                             "CREATE TABLE Customers (...); CREATE TABLE Orders (...); CREATE TABLE OrderItems (...);",
-                            "Cree les trois tables, insere un client de controle, puis affiche son nom et son email.",
+                            "Cree Customers, Orders et OrderItems dans cet ordre. Insere le client Customers (1, N'Ada Lovelace', N'ada@example.com'), puis affiche Name et Email avec WHERE Id = 1.",
                             """
                             CREATE TABLE Customers (
                                 Id int NOT NULL PRIMARY KEY,
@@ -3640,7 +3643,7 @@ public static class SeedData
                             WHERE Id = 1;
                             """,
                             "Les tables existent et acceptent une premiere ligne client.",
-                            "Respecte l'ordre Customers, Orders, OrderItems, puis verifie Customers.",
+                            "Respecte l'ordre Customers, Orders, OrderItems, insere Ada Lovelace avec ada@example.com, puis verifie Customers.",
                             55,
                             2,
                             [
@@ -3691,7 +3694,7 @@ public static class SeedData
                             "Remplir un schema relationnel avec des donnees coherentes.",
                             "Les insertions doivent respecter les cles etrangeres: creer les clients avant leurs commandes, puis les lignes de commande.",
                             "INSERT INTO Customers ... INSERT INTO Orders ... INSERT INTO OrderItems ...",
-                            "Cree les tables, insere deux clients, deux commandes et trois lignes, puis compte les lignes de commande.",
+                            "Cree les tables, insere Customers Ada Lovelace et Alan Turing, Orders Id 1 pour Ada et Id 2 pour Alan, puis trois OrderItems. Termine avec COUNT(*) AS LineCount depuis OrderItems.",
                             """
                             CREATE TABLE Customers (
                                 Id int NOT NULL PRIMARY KEY,
@@ -3733,7 +3736,7 @@ public static class SeedData
                             FROM OrderItems;
                             """,
                             "Les donnees respectent les relations et les quantites attendues.",
-                            "Insere dans l'ordre Customers, Orders, OrderItems, puis compte OrderItems.",
+                            "Insere dans l'ordre Customers, Orders, OrderItems avec les deux clients Ada/Alan et trois lignes de commande, puis compte OrderItems.",
                             60,
                             3,
                             [
@@ -3792,7 +3795,7 @@ public static class SeedData
                             "Relier commandes, clients et produits pour afficher une information utile.",
                             "Une requete metier transforme des identifiants techniques en informations lisibles pour l'utilisateur.",
                             "SELECT o.Id, c.Name FROM Orders o INNER JOIN Customers c ON o.CustomerId = c.Id;",
-                            "Cree et remplis le mini-schema, puis affiche les commandes avec le nom du client et le nom du produit.",
+                            "Cree et remplis le mini-schema avec Ada Lovelace, Alan Turing, deux commandes et trois lignes. Affiche OrderId, CustomerName et ProductName avec des JOIN vers Customers, OrderItems et Products.",
                             """
                             CREATE TABLE Customers (Id int NOT NULL PRIMARY KEY, Name nvarchar(80) NOT NULL, Email nvarchar(120) NOT NULL UNIQUE);
                             CREATE TABLE Orders (Id int NOT NULL PRIMARY KEY, CustomerId int NOT NULL, OrderedAt nvarchar(20) NOT NULL, CONSTRAINT FK_Orders_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(Id));
@@ -3809,7 +3812,7 @@ public static class SeedData
                             ORDER BY o.Id;
                             """,
                             "Les commandes sont lisibles avec client et produit.",
-                            "Utilise les jointures Orders, Customers, OrderItems et Products.",
+                            "Utilise les jointures Orders, Customers, OrderItems et Products, et retourne trois lignes avec les alias OrderId, CustomerName, ProductName.",
                             65,
                             4,
                             [
@@ -3837,7 +3840,7 @@ public static class SeedData
                             "Ajouter un index adapte a une requete frequente.",
                             "Un index sur une cle etrangere ou une colonne souvent filtree aide SQL Server a retrouver les lignes plus efficacement.",
                             "CREATE INDEX IX_Orders_CustomerId ON Orders(CustomerId);",
-                            "Cree et remplis le mini-schema, ajoute un index sur Orders(CustomerId), puis affiche les commandes d'Ada.",
+                            "Cree et remplis le mini-schema avec Ada Lovelace et Alan Turing. Ajoute l'index IX_Orders_CustomerId sur Orders(CustomerId), puis affiche OrderId et CustomerName des commandes d'Ada Lovelace.",
                             """
                             CREATE TABLE Customers (Id int NOT NULL PRIMARY KEY, Name nvarchar(80) NOT NULL, Email nvarchar(120) NOT NULL UNIQUE);
                             CREATE TABLE Orders (Id int NOT NULL PRIMARY KEY, CustomerId int NOT NULL, OrderedAt nvarchar(20) NOT NULL, CONSTRAINT FK_Orders_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(Id));
@@ -3855,7 +3858,7 @@ public static class SeedData
                             WHERE c.Name = N'Ada Lovelace';
                             """,
                             "L'index cible la relation la plus consultee.",
-                            "Cree IX_Orders_CustomerId puis filtre les commandes d'Ada.",
+                            "Cree IX_Orders_CustomerId sur Orders(CustomerId), puis filtre WHERE c.Name = N'Ada Lovelace'.",
                             55,
                             5,
                             [
@@ -3883,7 +3886,7 @@ public static class SeedData
                             "Calculer un indicateur metier sur le mini-schema e-commerce.",
                             "Un total de commande combine jointures, calcul, GROUP BY et un alias clair pour etre exploitable.",
                             "SUM(oi.Quantity * oi.UnitPrice) AS OrderTotal",
-                            "Cree et remplis le mini-schema, puis affiche le total de chaque commande avec le nom du client.",
+                            "Cree et remplis le mini-schema avec deux commandes: Ada totalise 58.50 et Alan 89.99. Affiche OrderId, CustomerName et OrderTotal avec SUM(oi.Quantity * oi.UnitPrice), GROUP BY o.Id, c.Name et ORDER BY OrderTotal DESC.",
                             """
                             CREATE TABLE Customers (Id int NOT NULL PRIMARY KEY, Name nvarchar(80) NOT NULL, Email nvarchar(120) NOT NULL UNIQUE);
                             CREATE TABLE Orders (Id int NOT NULL PRIMARY KEY, CustomerId int NOT NULL, OrderedAt nvarchar(20) NOT NULL, CONSTRAINT FK_Orders_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(Id));
@@ -3900,7 +3903,7 @@ public static class SeedData
                             ORDER BY OrderTotal DESC;
                             """,
                             "Module SQL 8 valide. Tu sais construire et interroger un mini-systeme e-commerce.",
-                            "Combine Customers, Orders, OrderItems, SUM, GROUP BY et ORDER BY.",
+                            "Combine Customers, Orders, OrderItems, SUM(oi.Quantity * oi.UnitPrice) AS OrderTotal, GROUP BY o.Id, c.Name et ORDER BY OrderTotal DESC.",
                             90,
                             6,
                             [
@@ -5793,6 +5796,8 @@ public static class SeedData
     private static async Task RefreshExistingLessonGuidanceAsync(AppDbContext db)
     {
         var lessons = await db.Lessons
+            .Include(lesson => lesson.Chapter)
+            .ThenInclude(chapter => chapter!.Course)
             .Where(lesson => lesson.FinalCorrection != "")
             .ToListAsync();
 
@@ -5800,9 +5805,72 @@ public static class SeedData
         {
             lesson.ExampleCode = MakeIllustrativeExample(lesson.Slug, lesson.ExampleCode, lesson.FinalCorrection);
             lesson.StarterCode = SeparateStarterFromCorrection(lesson.Slug, lesson.StarterCode, lesson.FinalCorrection);
+            RefreshExplicitExerciseGuidance(lesson);
         }
 
         await db.SaveChangesAsync();
+    }
+
+    private static void RefreshExplicitExerciseGuidance(Lesson lesson)
+    {
+        switch (lesson.Slug)
+        {
+            case "sql-insert":
+                lesson.ExercisePrompt = "Ajoute dans Products le produit Id 6, Name N'Learning Mug', CategoryId 1, Price 14.90, Stock 12, IsActive 1, puis affiche Name, Price et Stock de la ligne ajoutee avec WHERE Id = 6.";
+                lesson.FailureFeedback = "Utilise INSERT INTO Products avec les colonnes Id, Name, CategoryId, Price, Stock, IsActive et les valeurs 6, N'Learning Mug', 1, 14.90, 12, 1, puis un SELECT de verification sur Id = 6.";
+                break;
+            case "sql-primary-keys":
+                lesson.ExercisePrompt = "Cree la table Suppliers avec Id comme cle primaire et Name nvarchar(80) NOT NULL. Insere le fournisseur Id 1, Name N'Northwind Supply', puis affiche Id et Name avec WHERE Id = 1.";
+                lesson.FailureFeedback = "Utilise PRIMARY KEY sur Id, insere (1, N'Northwind Supply'), puis verifie avec SELECT Id, Name WHERE Id = 1.";
+                break;
+            case "sql-foreign-keys":
+                lesson.ExercisePrompt = "Cree Suppliers et SupplierProducts. Insere Suppliers (1, N'Northwind Supply'), relie SupplierId 1 au ProductId 2 dans SupplierProducts, puis affiche SupplierId et ProductId.";
+                lesson.FailureFeedback = "Ajoute deux FOREIGN KEY: SupplierId vers Suppliers(Id), ProductId vers Products(Id). Insere le lien (SupplierId 1, ProductId 2).";
+                break;
+            case "sql-constraints":
+                lesson.ExercisePrompt = "Cree Warehouses avec Id PRIMARY KEY, Code nvarchar(10) NOT NULL UNIQUE et Capacity int NOT NULL CHECK (Capacity > 0). Insere (1, N'WH-A', 120), puis affiche Code et Capacity avec WHERE Code = N'WH-A'.";
+                lesson.FailureFeedback = "Utilise NOT NULL, UNIQUE et CHECK (Capacity > 0), puis insere WH-A avec Capacity 120.";
+                break;
+            case "sql-relationships":
+                lesson.ExercisePrompt = "Cree Suppliers et SupplierProducts. Insere Suppliers (1, N'Northwind Supply'), relie SupplierId 1 au ProductId 4, puis affiche SupplierName et ProductName avec des JOIN.";
+                lesson.FailureFeedback = "Utilise SupplierProducts avec deux FOREIGN KEY, insere le lien (1, 4), puis fais deux JOIN de lecture vers Suppliers et Products.";
+                break;
+            case "sql-modeling-checkpoint":
+                lesson.ExercisePrompt = "Cree Students, Courses et StudentCourses. Insere Students (1, N'Ada'), Courses (1, N'SQL Server'), inscris StudentId 1 au CourseId 1, puis affiche StudentName et CourseTitle.";
+                lesson.FailureFeedback = "Combine trois tables, cles primaires, deux cles etrangeres, les insertions Ada / SQL Server et une requete JOIN finale.";
+                break;
+            case "sql-create-project-tables":
+                lesson.ExercisePrompt = "Cree Customers, Orders et OrderItems dans cet ordre. Insere le client Customers (1, N'Ada Lovelace', N'ada@example.com'), puis affiche Name et Email avec WHERE Id = 1.";
+                lesson.FailureFeedback = "Respecte l'ordre Customers, Orders, OrderItems, insere Ada Lovelace avec ada@example.com, puis verifie Customers.";
+                break;
+            case "sql-seed-project-data":
+                lesson.ExercisePrompt = "Cree les tables, insere Customers Ada Lovelace et Alan Turing, Orders Id 1 pour Ada et Id 2 pour Alan, puis trois OrderItems. Termine avec COUNT(*) AS LineCount depuis OrderItems.";
+                lesson.FailureFeedback = "Insere dans l'ordre Customers, Orders, OrderItems avec les deux clients Ada/Alan et trois lignes de commande, puis compte OrderItems.";
+                break;
+            case "sql-business-queries":
+                lesson.ExercisePrompt = "Cree et remplis le mini-schema avec Ada Lovelace, Alan Turing, deux commandes et trois lignes. Affiche OrderId, CustomerName et ProductName avec des JOIN vers Customers, OrderItems et Products.";
+                lesson.FailureFeedback = "Utilise les jointures Orders, Customers, OrderItems et Products, et retourne trois lignes avec les alias OrderId, CustomerName, ProductName.";
+                break;
+            case "sql-simple-optimization":
+                lesson.ExercisePrompt = "Cree et remplis le mini-schema avec Ada Lovelace et Alan Turing. Ajoute l'index IX_Orders_CustomerId sur Orders(CustomerId), puis affiche OrderId et CustomerName des commandes d'Ada Lovelace.";
+                lesson.FailureFeedback = "Cree IX_Orders_CustomerId sur Orders(CustomerId), puis filtre WHERE c.Name = N'Ada Lovelace'.";
+                break;
+            case "sql-project-checkpoint":
+                lesson.ExercisePrompt = "Cree et remplis le mini-schema avec deux commandes: Ada totalise 58.50 et Alan 89.99. Affiche OrderId, CustomerName et OrderTotal avec SUM(oi.Quantity * oi.UnitPrice), GROUP BY o.Id, c.Name et ORDER BY OrderTotal DESC.";
+                lesson.FailureFeedback = "Combine Customers, Orders, OrderItems, SUM(oi.Quantity * oi.UnitPrice) AS OrderTotal, GROUP BY o.Id, c.Name et ORDER BY OrderTotal DESC.";
+                break;
+        }
+
+        if (lesson.Chapter?.Course?.Language == "php-symfony"
+            && lesson.Slug.StartsWith("php-symfony-module-", StringComparison.OrdinalIgnoreCase)
+            && !lesson.IsBossFinal)
+        {
+            var expected = PhpSymfonyExpectedSnippetsFor(lesson.Title);
+            var expectedText = string.Join(", ", expected);
+            lesson.ExercisePrompt = $"Complete le code pour montrer une utilisation correcte de: {lesson.Title}. Elements attendus: {expectedText}.";
+            lesson.FailureFeedback = $"Ajoute les elements attendus: {expectedText}.";
+            lesson.StarterCode = PhpSymfonyStarterFor(lesson.Title, expected);
+        }
     }
 
     private static async Task EnsurePhpSymfonyCourseSeededAsync(AppDbContext db)
@@ -6153,21 +6221,26 @@ public static class SeedData
 
     private static Chapter PhpSymfonyModule(int sortOrder, string title, string description, string[] lessonTitles) =>
         Chapter($"Module {sortOrder} - {title}", description, sortOrder, 0,
-            lessonTitles.Select((lessonTitle, index) => PhpLesson(
-                $"php-symfony-module-{sortOrder}-{Slugify(lessonTitle)}",
-                lessonTitle,
-                $"Comprendre et pratiquer: {lessonTitle}.",
-                $"{lessonTitle} fait partie du socle PHP/Symfony du module. L'exercice valide les mots-cles et structures essentiels sans sortir du cadre PHP/Symfony.",
-                PhpSymfonyExampleFor(lessonTitle),
-                $"Complete le code pour montrer une utilisation correcte de: {lessonTitle}.",
-                PhpSymfonyStarterFor(lessonTitle),
-                "La notion est presente dans un code PHP/Symfony coherent.",
-                "Ajoute les mots-cles attendus et garde le code centre sur Symfony.",
-                45 + index * 5,
-                index + 1,
-                PhpSymfonyTestsFor(lessonTitle),
-                conceptSummary: $"{lessonTitle} est une brique du parcours PHP/Symfony.",
-                finalCorrection: PhpSymfonySolutionFor(lessonTitle))).ToList());
+            lessonTitles.Select((lessonTitle, index) =>
+            {
+                var expectedSnippets = PhpSymfonyExpectedSnippetsFor(lessonTitle);
+                var expectedText = string.Join(", ", expectedSnippets);
+                return PhpLesson(
+                    $"php-symfony-module-{sortOrder}-{Slugify(lessonTitle)}",
+                    lessonTitle,
+                    $"Comprendre et pratiquer: {lessonTitle}.",
+                    $"{lessonTitle} fait partie du socle PHP/Symfony du module. L'exercice valide les mots-cles et structures essentiels sans sortir du cadre PHP/Symfony.",
+                    PhpSymfonyExampleFor(lessonTitle),
+                    $"Complete le code pour montrer une utilisation correcte de: {lessonTitle}. Elements attendus: {expectedText}.",
+                    PhpSymfonyStarterFor(lessonTitle, expectedSnippets),
+                    "La notion est presente dans un code PHP/Symfony coherent.",
+                    $"Ajoute les elements attendus: {expectedText}.",
+                    45 + index * 5,
+                    index + 1,
+                    PhpSymfonyTestsFor(lessonTitle),
+                    conceptSummary: $"{lessonTitle} est une brique du parcours PHP/Symfony.",
+                    finalCorrection: PhpSymfonySolutionFor(lessonTitle));
+            }).ToList());
 
     private static Lesson PhpLesson(
         string slug,
@@ -6247,8 +6320,13 @@ public static class SeedData
         _ => "<?php\n#[Route('/products')]\nfinal class ProductController extends AbstractController {}"
     };
 
-    private static string PhpSymfonyStarterFor(string lessonTitle) =>
-        $"<?php\n\n// Complete une implementation PHP/Symfony pour: {lessonTitle}\n";
+    private static string PhpSymfonyStarterFor(string lessonTitle, IReadOnlyList<string>? expectedSnippets = null)
+    {
+        var expected = expectedSnippets is { Count: > 0 }
+            ? $"// Elements attendus: {string.Join(", ", expectedSnippets)}\n"
+            : "";
+        return $"<?php\n\n// Complete une implementation PHP/Symfony pour: {lessonTitle}\n{expected}";
+    }
 
     private static string PhpSymfonySolutionFor(string lessonTitle) => lessonTitle switch
     {
@@ -6288,42 +6366,7 @@ public static class SeedData
 
     private static List<LessonTest> PhpSymfonyTestsFor(string lessonTitle)
     {
-        string[] expected = lessonTitle switch
-        {
-            "Classes" => ["class Product"],
-            "Objets" => ["new Product"],
-            "Proprietes" => ["private", "$"],
-            "Methodes" => ["function"],
-            "Constructeurs" => ["__construct"],
-            "Encapsulation" => ["private", "public function"],
-            "Structure d'un projet Symfony" => ["src", "templates"],
-            "Routes" or "Parametres de route" => ["#[Route"],
-            "Controllers" => ["AbstractController"],
-            "Responses" => ["Response"],
-            "Templates Twig" => ["{{", "}}"],
-            "Creation de formulaire" or "Formulaires" => ["createForm"],
-            "Validation" or "Contraintes" => ["Assert\\"],
-            "Gestion des erreurs" => ["form_errors"],
-            "Traitement de la soumission" => ["handleRequest", "isSubmitted", "isValid"],
-            "Entites" => ["ORM\\Entity"],
-            "Repositories" => ["Repository"],
-            "Migrations" => ["AbstractMigration"],
-            "Relations simples" => ["ORM\\ManyToOne"],
-            "CRUD avec Doctrine" or "Doctrine" => ["persist", "flush"],
-            "Services" => ["ProductService"],
-            "Injection de dependances" => ["__construct", "ProductService"],
-            "Configuration" => ["services:"],
-            "Separation controller / service" => ["ProductService"],
-            "Bonnes pratiques Symfony" => ["final"],
-            "Authentification" => ["Authenticator"],
-            "Utilisateurs" => ["UserInterface"],
-            "Roles" => ["ROLE_USER"],
-            "Protection des routes" => ["IsGranted"],
-            "Autorisations simples" => ["denyAccessUnlessGranted"],
-            "Mini-application MVC" => ["#[Route", "AbstractController"],
-            "Securite simple" => ["ROLE_USER"],
-            _ => ["<?php"]
-        };
+        var expected = PhpSymfonyExpectedSnippetsFor(lessonTitle);
 
         return expected.Select((snippet, index) =>
         {
@@ -6332,6 +6375,43 @@ public static class SeedData
             return test;
         }).ToList();
     }
+
+    private static string[] PhpSymfonyExpectedSnippetsFor(string lessonTitle) => lessonTitle switch
+    {
+        "Classes" => ["class Product"],
+        "Objets" => ["new Product"],
+        "Proprietes" => ["private", "$"],
+        "Methodes" => ["function"],
+        "Constructeurs" => ["__construct"],
+        "Encapsulation" => ["private", "public function"],
+        "Structure d'un projet Symfony" => ["src", "templates"],
+        "Routes" or "Parametres de route" => ["#[Route"],
+        "Controllers" => ["AbstractController"],
+        "Responses" => ["Response"],
+        "Templates Twig" => ["{{", "}}"],
+        "Creation de formulaire" or "Formulaires" => ["createForm"],
+        "Validation" or "Contraintes" => ["Assert\\"],
+        "Gestion des erreurs" => ["form_errors"],
+        "Traitement de la soumission" => ["handleRequest", "isSubmitted", "isValid"],
+        "Entites" => ["ORM\\Entity"],
+        "Repositories" => ["Repository"],
+        "Migrations" => ["AbstractMigration"],
+        "Relations simples" => ["ORM\\ManyToOne"],
+        "CRUD avec Doctrine" or "Doctrine" => ["persist", "flush"],
+        "Services" => ["ProductService"],
+        "Injection de dependances" => ["__construct", "ProductService"],
+        "Configuration" => ["services:"],
+        "Separation controller / service" => ["ProductService"],
+        "Bonnes pratiques Symfony" => ["final"],
+        "Authentification" => ["Authenticator"],
+        "Utilisateurs" => ["UserInterface"],
+        "Roles" => ["ROLE_USER"],
+        "Protection des routes" => ["IsGranted"],
+        "Autorisations simples" => ["denyAccessUnlessGranted"],
+        "Mini-application MVC" => ["#[Route", "AbstractController"],
+        "Securite simple" => ["ROLE_USER"],
+        _ => ["<?php"]
+    };
 
 
     private static async Task EnsureIntermediateBossesSeededAsync(AppDbContext db)

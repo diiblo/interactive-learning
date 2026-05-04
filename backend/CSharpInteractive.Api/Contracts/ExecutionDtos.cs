@@ -4,6 +4,19 @@ using CSharpInteractive.Api.Models;
 
 public sealed record CodeRequest(string Code);
 
+public sealed record SubmitCodeRequest(
+    string Code,
+    string ValidationMode = "local",
+    IReadOnlyList<AiProviderConfigDto>? AiProviders = null);
+
+public sealed record AiProviderConfigDto(
+    string Id,
+    string Type,
+    string Name,
+    string ApiKey,
+    string Model,
+    string? BaseUrl = null);
+
 public enum SubmissionErrorCategory
 {
     SyntaxError,

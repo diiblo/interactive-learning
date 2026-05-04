@@ -1,4 +1,5 @@
 import type {
+  AiProviderConfigDto,
   CourseMapDto,
   CourseSummaryDto,
   ExecutionResultDto,
@@ -15,6 +16,11 @@ import type {
 } from "@/types/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000/api";
+
+export type SubmitOptions = {
+  validationMode?: "local" | "ai";
+  aiProviders?: AiProviderConfigDto[];
+};
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -58,30 +64,30 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
-  submitLesson: (lessonId: number, code: string) =>
+  submitLesson: (lessonId: number, code: string, options?: SubmitOptions) =>
     request<SubmitResultDto>(`/lessons/${lessonId}/submit`, {
       method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, validationMode: options?.validationMode ?? "local", aiProviders: options?.aiProviders ?? [] }),
     }),
   runSqlLesson: (lessonId: number, code: string) =>
     request<ExecutionResultDto>(`/sql/lessons/${lessonId}/run`, {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
-  submitSqlLesson: (lessonId: number, code: string) =>
+  submitSqlLesson: (lessonId: number, code: string, options?: SubmitOptions) =>
     request<SubmitResultDto>(`/sql/lessons/${lessonId}/submit`, {
       method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, validationMode: options?.validationMode ?? "local", aiProviders: options?.aiProviders ?? [] }),
     }),
   runIntermediateBoss: (bossId: number, code: string) =>
     request<ExecutionResultDto>(`/intermediate-bosses/${bossId}/run`, {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
-  submitIntermediateBoss: (bossId: number, code: string) =>
+  submitIntermediateBoss: (bossId: number, code: string, options?: SubmitOptions) =>
     request<SubmitResultDto>(`/intermediate-bosses/${bossId}/submit`, {
       method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, validationMode: options?.validationMode ?? "local", aiProviders: options?.aiProviders ?? [] }),
     }),
   revealIntermediateBossHint: (bossId: number) =>
     request<IntermediateBossHintResultDto>(`/intermediate-bosses/${bossId}/hint`, {
@@ -96,9 +102,9 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
-  submitBossFinal: (code: string) =>
+  submitBossFinal: (code: string, options?: SubmitOptions) =>
     request<SubmitResultDto>("/boss-final/submit", {
       method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, validationMode: options?.validationMode ?? "local", aiProviders: options?.aiProviders ?? [] }),
     }),
 };

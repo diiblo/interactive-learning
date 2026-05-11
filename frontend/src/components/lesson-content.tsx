@@ -47,7 +47,7 @@ function InfoBlock({ icon, title, content }: { icon: React.ReactNode; title: str
         <span className="text-[var(--color-primary)]">{icon}</span>
         {title}
       </div>
-      <p className="text-sm leading-6 text-[var(--color-text-muted)]">{content}</p>
+      <p className="whitespace-pre-line text-sm leading-6 text-[var(--color-text-muted)]">{content}</p>
     </div>
   );
 }

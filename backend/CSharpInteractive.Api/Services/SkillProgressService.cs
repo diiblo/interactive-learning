@@ -337,6 +337,39 @@ public sealed class SkillProgressService(AppDbContext db)
 
         if (message.Contains("doit contenir", StringComparison.OrdinalIgnoreCase))
         {
+            if (message.Contains("#[Route", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("public function", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("Response", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("handleRequest", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("isSubmitted", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("isValid", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("flush()", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("persist($product)", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("remove($product)", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("render", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("redirectToRoute", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("foreach", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("function", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("class Product", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("interface ProductRepositoryInterface", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("prepare", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("json_encode", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("useState", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("useEffect", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("key=", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains(".map(", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("FlatList", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("renderItem", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("class=", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("grid", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("@media", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("querySelector", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("addEventListener", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("localStorage", StringComparison.OrdinalIgnoreCase))
+            {
+                return SubmissionErrorCategory.PartialSolution;
+            }
+
             return SubmissionErrorCategory.MissingRequiredSnippet;
         }
 
@@ -352,14 +385,14 @@ public sealed class SkillProgressService(AppDbContext db)
 
         return category switch
         {
-            SubmissionErrorCategory.EmptyCode => "Aucun code valide n'a ete detecte. Ecris une solution complete.",
+            SubmissionErrorCategory.EmptyCode => "Aucun code valide n'a ete detecte. Repars du starter et complete les TODO.",
             SubmissionErrorCategory.CompilationError => "Le code ne compile pas encore. Corrige les erreurs de syntaxe ou de type.",
             SubmissionErrorCategory.RuntimeError => "Le programme s'arrete avec une erreur a l'execution.",
-            SubmissionErrorCategory.MissingRequiredSnippet => "Un element requis manque encore dans ta solution.",
+            SubmissionErrorCategory.MissingRequiredSnippet => "Un element requis manque encore dans ta solution. Relis les contraintes de code de l'exercice.",
             SubmissionErrorCategory.ForbiddenSnippetUsed => "Un element interdit est present dans ta solution.",
             SubmissionErrorCategory.WrongOutput => "La sortie produite ne correspond pas a l'attendu.",
             SubmissionErrorCategory.PartialSolution => failedTests.Count > 0
-                ? $"{failedTests.Count} point(s) restent a corriger pour valider l'exercice."
+                ? $"{failedTests.Count} point(s) restent a corriger. Complete la structure demandee plutot que de coder uniquement la sortie."
                 : "La solution est incomplete.",
             _ => execution.Success ? "Le code a ete analyse, mais il manque encore un element." : "Le code doit etre ajuste pour passer la validation."
         };

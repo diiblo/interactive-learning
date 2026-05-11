@@ -78,17 +78,33 @@ public sealed class IntermediateBossService(
 
     public async Task<SubmitResultDto> SubmitWithAiAsync(UserProfile profile, IntermediateBoss boss, string code, IReadOnlyList<AiProviderConfigDto>? providers)
     {
-        var aiResult = await aiValidationService.ValidateIntermediateBossAsync(boss, code, providers);
-        var execution = new ExecutionResultDto(aiResult.Passed, aiResult.Feedback, [], 0);
-        var results = new List<TestResultDto>
-        {
-            new($"Validation IA ({aiResult.ProviderName})", aiResult.Passed, aiResult.Feedback)
-        };
+        var execution = await RunAsync(boss, code);
+        var results = new List<TestResultDto>();
 
-        var passed = aiResult.Passed;
+        if (!execution.Success)
+        {
+            results.Add(new TestResultDto(
+                $"{languageService.GetRequiredHandler(boss).EditorLanguage} execution",
+                false,
+                string.Join("\n", execution.Diagnostics)));
+        }
+        else
+        {
+            foreach (var rule in boss.ValidationRules.OrderBy(rule => rule.SortOrder).ThenBy(rule => rule.Id))
+            {
+                results.Add(await languageService.GetRequiredHandler(boss).EvaluateBossRuleAsync(rule, code, execution));
+            }
+        }
+
+        var localPassed = results.Count > 0 && results.All(result => result.Passed);
+        var aiResult = await aiValidationService.ValidateIntermediateBossAsync(boss, code, providers);
+        results.Add(new($"Validation IA ({aiResult.ProviderName})", aiResult.Passed, aiResult.Feedback));
+
+        var passed = localPassed && aiResult.Passed;
+        var output = $"Validation locale: {(localPassed ? "OK" : "KO")}\n{execution.Output}\n\nValidation IA ({aiResult.ProviderName}): {(aiResult.Passed ? "OK" : "KO")}\n{aiResult.Feedback}";
         var progress = await GetOrCreateProgressAsync(profile, boss);
         progress.Attempts += 1;
-        progress.LastOutput = aiResult.Feedback;
+        progress.LastOutput = output;
 
         var xpEarned = 0;
         if (passed)
@@ -119,19 +135,19 @@ public sealed class IntermediateBossService(
         var unlocked = passed ? await unlockService.RefreshUnlocksAsync(profile) : [];
         var feedback = passed
             ? "Monstre vaincu avec validation IA. Le module suivant peut maintenant etre deverrouille."
-            : "La validation IA refuse encore la reponse. Corrige le point indique, puis retente.";
+            : "La validation locale ou IA refuse encore la reponse. Corrige les points indiques, puis retente.";
         var bossResult = await skillProgressService.BuildBossResultAsync(profile, boss, results, passed);
 
         return new SubmitResultDto(
             passed,
-            execution.Output,
+            output,
             results,
             feedback,
             xpEarned,
             profile.Level,
             unlocked,
             [],
-            AiSubmissionFeedbackFactory.Create(aiResult),
+            null,
             bossResult);
     }
 

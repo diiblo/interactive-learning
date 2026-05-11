@@ -93,6 +93,12 @@ export type LessonDetailDto = {
   slug: string;
   title: string;
   editorLanguage: string;
+  previewMode: "none" | "html-css" | "tailwind" | "javascript-dom" | "react";
+  previewHtml: string;
+  previewCss: string;
+  previewJs: string;
+  previewEntry: string;
+  supportsPreview: boolean;
   objective: string;
   conceptSummary: string;
   commonMistakes: string;

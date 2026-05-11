@@ -59,10 +59,15 @@ public sealed class SqlLessonsController(
         var lesson = access.Lesson!;
         if (string.Equals(request.ValidationMode, "ai", StringComparison.OrdinalIgnoreCase))
         {
+            var localCorrection = await languageService.GetRequiredHandler(lesson).SubmitAsync(lesson, request.Code);
             var aiResult = await aiValidationService.ValidateLessonAsync(lesson, request.Code, request.AiProviders);
-            var tests = new[] { new TestResultDto($"Validation IA ({aiResult.ProviderName})", aiResult.Passed, aiResult.Feedback) };
-            var execution = new ExecutionResultDto(aiResult.Passed, aiResult.Feedback, [], 0);
-            return await progressService.CompleteLessonAsync(profile, lesson, request.Code, aiResult.Feedback, tests, aiResult.Passed, execution, AiSubmissionFeedbackFactory.Create(aiResult));
+            var tests = localCorrection.Tests
+                .Concat([new TestResultDto($"Validation IA ({aiResult.ProviderName})", aiResult.Passed, aiResult.Feedback)])
+                .ToList();
+            var passed = localCorrection.Passed && aiResult.Passed;
+            var output = $"Validation locale: {(localCorrection.Passed ? "OK" : "KO")}\n{localCorrection.Execution.Output}\n\nValidation IA ({aiResult.ProviderName}): {(aiResult.Passed ? "OK" : "KO")}\n{aiResult.Feedback}";
+            var execution = new ExecutionResultDto(localCorrection.Execution.Success && aiResult.Passed, output, localCorrection.Execution.Diagnostics, localCorrection.Execution.DurationMs, localCorrection.Execution.Columns, localCorrection.Execution.Rows);
+            return await progressService.CompleteLessonAsync(profile, lesson, request.Code, output, tests, passed, execution);
         }
 
         var correction = await languageService.GetRequiredHandler(lesson).SubmitAsync(lesson, request.Code);
@@ -104,6 +109,12 @@ public sealed class SqlLessonsController(
             lesson.Slug,
             lesson.Title,
             "sql",
+            "none",
+            "",
+            "",
+            "",
+            "",
+            false,
             lesson.Objective,
             lesson.ConceptSummary,
             lesson.CommonMistakes,

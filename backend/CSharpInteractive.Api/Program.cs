@@ -32,6 +32,7 @@ builder.Services.AddScoped<SqlExecutionService>();
 builder.Services.AddScoped<SqlCorrectionService>();
 builder.Services.AddScoped<IntermediateBossService>();
 builder.Services.AddScoped<PhpSymfonyValidationService>();
+builder.Services.AddScoped<StaticSnippetValidationService>();
 builder.Services.AddScoped<ProgressService>();
 builder.Services.AddScoped<UnlockService>();
 builder.Services.AddScoped<CourseCatalogService>();
@@ -41,6 +42,11 @@ builder.Services.AddHttpClient<AiValidationService>();
 builder.Services.AddScoped<ILearningLanguageHandler, CSharpLearningLanguageHandler>();
 builder.Services.AddScoped<ILearningLanguageHandler, SqlServerLearningLanguageHandler>();
 builder.Services.AddScoped<ILearningLanguageHandler, PhpSymfonyLearningLanguageHandler>();
+builder.Services.AddScoped<ILearningLanguageHandler, ReactLearningLanguageHandler>();
+builder.Services.AddScoped<ILearningLanguageHandler, ReactNativeLearningLanguageHandler>();
+builder.Services.AddScoped<ILearningLanguageHandler, TailwindCssLearningLanguageHandler>();
+builder.Services.AddScoped<ILearningLanguageHandler, CssLearningLanguageHandler>();
+builder.Services.AddScoped<ILearningLanguageHandler, JavaScriptLearningLanguageHandler>();
 
 var app = builder.Build();
 

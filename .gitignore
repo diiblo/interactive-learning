@@ -1,0 +1,72 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Local tooling state
+.codex
+.agents/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+
+# Node dependencies and build outputs
+/package.json
+/package-lock.json
+node_modules/
+**/node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+coverage/
+**/coverage/
+.next/
+**/.next/
+out/
+**/out/
+build/
+**/build/
+dist/
+**/dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# .NET build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+TestResults/
+**/TestResults/
+*.user
+*.suo
+*.rsuser
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Docker and local data
+.docker/
+docker-data/
+data/
+tmp/
+temp/

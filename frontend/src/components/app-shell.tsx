@@ -23,8 +23,8 @@ import type {
 } from "@/types/api";
 import { BadgeGrid } from "./badge-grid";
 import { BossFinalWorkspace } from "./boss-final-workspace";
-import { CodeEditor } from "./code-editor";
 import { CourseSidebar } from "./course-sidebar";
+import { EditorWorkspace } from "./editor-workspace";
 import { FeedbackPanel } from "./feedback-panel";
 import { IntermediateBossContent } from "./intermediate-boss-content";
 import { IntermediateBossHelp } from "./intermediate-boss-help";
@@ -61,6 +61,42 @@ function initialEditorCode(language: string) {
   return language === "csharp" ? "using System;\n\n// Ecris ton code ici\n" : "";
 }
 
+function editorFileName(language: string) {
+  if (language === "sql") return "query.sql";
+  if (language === "html") return "index.html";
+  if (language === "css") return "styles.css";
+  if (language === "javascript") return "script.js";
+  if (language === "typescript") return "component.tsx";
+  return "Program.cs";
+}
+
+function readInitialValidationMode(): ValidationMode {
+  if (typeof window === "undefined") {
+    return "local";
+  }
+
+  const storedMode = localStorage.getItem(VALIDATION_MODE_STORAGE_KEY);
+  return storedMode === "local" || storedMode === "ai" ? storedMode : "local";
+}
+
+function readInitialAiProviders(): AiProviderConfigDto[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedProviders = localStorage.getItem(AI_PROVIDERS_STORAGE_KEY);
+    if (!storedProviders) {
+      return [];
+    }
+
+    const parsed = JSON.parse(storedProviders) as AiProviderConfigDto[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function createAiProvider(type = "openrouter"): AiProviderConfigDto {
   const defaults = providerDefaults[type] ?? providerDefaults.openrouter;
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -95,8 +131,8 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
   const [sqlRows, setSqlRows] = useState<Record<string, string | number | boolean | null>[]>([]);
   const [lastSubmit, setLastSubmit] = useState<SubmitResultDto | null>(null);
   const [isInfoPanelCollapsed, setIsInfoPanelCollapsed] = useState(false);
-  const [validationMode, setValidationMode] = useState<ValidationMode>("local");
-  const [aiProviders, setAiProviders] = useState<AiProviderConfigDto[]>([]);
+  const [validationMode, setValidationMode] = useState<ValidationMode>(readInitialValidationMode);
+  const [aiProviders, setAiProviders] = useState<AiProviderConfigDto[]>(readInitialAiProviders);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
@@ -106,6 +142,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
 
   const activeMapItem = useMemo(() => (lesson ? findLessonInMap(courseMap, lesson.id) : null), [courseMap, lesson]);
   const activeEditorLanguage = intermediateBoss?.editorLanguage ?? lesson?.editorLanguage ?? "csharp";
+  const activePreview = lesson?.supportsPreview ? lesson : null;
 
   const refreshProgress = useCallback(async () => {
     const [nextProfile, nextProgress] = await Promise.all([apiClient.getProfile(), apiClient.getProgress()]);
@@ -156,8 +193,8 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     const courseId = courseIdOverride ?? selectedCourseIdRef.current;
     const course = coursesRef.current.find((candidate) => candidate.id === courseId);
     const detail = course?.language === "sqlserver" ? await apiClient.getSqlLesson(item.id) : await apiClient.getLesson(item.id);
+    setCode(detail.starterCode || initialEditorCode(detail.editorLanguage));
     setLesson(detail);
-    setCode(initialEditorCode(detail.editorLanguage));
 
     if (detail.editorLanguage === "sql") {
       setSqlSchema(await apiClient.getSqlSchema());
@@ -182,8 +219,8 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     setIntermediateBossSolution(null);
 
     const detail = await apiClient.getIntermediateBoss(item.moduleId);
+    setCode(detail.starterCode || initialEditorCode(detail.editorLanguage));
     setIntermediateBoss(detail);
-    setCode(initialEditorCode(detail.editorLanguage));
 
     if (detail.editorLanguage === "sql") {
       setSqlSchema(await apiClient.getSqlSchema());
@@ -243,25 +280,6 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadInitialData();
   }, [loadInitialData]);
-
-  useEffect(() => {
-    try {
-      const storedMode = localStorage.getItem(VALIDATION_MODE_STORAGE_KEY);
-      if (storedMode === "local" || storedMode === "ai") {
-        setValidationMode(storedMode);
-      }
-
-      const storedProviders = localStorage.getItem(AI_PROVIDERS_STORAGE_KEY);
-      if (storedProviders) {
-        const parsed = JSON.parse(storedProviders) as AiProviderConfigDto[];
-        if (Array.isArray(parsed)) {
-          setAiProviders(parsed);
-        }
-      }
-    } catch {
-      setAiProviders([]);
-    }
-  }, []);
 
   useEffect(() => {
     localStorage.setItem(VALIDATION_MODE_STORAGE_KEY, validationMode);
@@ -466,15 +484,15 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
                 Monstre vaincu
               </div>
             ) : null}
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[#161b22] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[#161b22] px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-white">{activeEditorLanguage === "sql" ? "query.sql" : "Program.cs"}</p>
+                <p className="text-sm font-semibold text-white">{editorFileName(activeEditorLanguage)}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   {intermediateBoss ? intermediateBoss.status : activeMapItem?.status ?? "Locked"}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="hidden rounded-md border border-[var(--color-border)] bg-[#1e2329] p-1 md:flex">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex rounded-md border border-[var(--color-border)] bg-[#1e2329] p-1">
                   <button
                     type="button"
                     onClick={() => setValidationMode("local")}
@@ -498,11 +516,12 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
                 <button
                   type="button"
                   onClick={() => setIsAiSettingsOpen(true)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] bg-[#1e2329] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-white"
+                  className="inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[#1e2329] px-3 py-2 text-sm font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-white"
                   aria-label="Configurer la validation IA"
                   title="Configurer la validation IA"
                 >
                   <Settings size={16} />
+                  Config IA
                 </button>
                 <button
                   type="button"
@@ -538,9 +557,13 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
 
             {activeEditorLanguage === "sql" ? <SqlSafetyNotice schema={sqlSchema} /> : null}
 
-            <div className="min-h-0 flex-1">
-              <CodeEditor code={code} language={activeEditorLanguage} onChange={setCode} />
-            </div>
+            <EditorWorkspace
+              key={lesson ? `lesson-${lesson.id}` : intermediateBoss ? `boss-${intermediateBoss.id}` : "empty"}
+              code={code}
+              language={activeEditorLanguage}
+              onCodeChange={setCode}
+              preview={activePreview}
+            />
 
             {activeEditorLanguage === "sql" ? <SqlResultGrid columns={sqlColumns} rows={sqlRows} /> : null}
 
@@ -613,7 +636,7 @@ export function AppShell({ initialLessonId, initialBossFinal = false }: AppShell
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-white">Validation IA</p>
-                <p className="text-xs text-[var(--color-text-muted)]">Les cles restent dans ce navigateur et sont essayees dans l'ordre.</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Les cles restent dans ce navigateur et sont essayees dans l&apos;ordre.</p>
               </div>
               <button
                 type="button"

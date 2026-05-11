@@ -3,24 +3,18 @@ using CSharpInteractive.Api.Models;
 
 namespace CSharpInteractive.Api.Services;
 
-public sealed class PhpSymfonyValidationService
+public sealed class StaticSnippetValidationService
 {
     public Task<ExecutionResultDto> ValidateAsync(string code)
     {
         var diagnostics = new List<string>();
         if (string.IsNullOrWhiteSpace(code))
         {
-            diagnostics.Add("Le code PHP/Symfony ne peut pas etre vide.");
-        }
-
-        if (code.Contains("<?php", StringComparison.OrdinalIgnoreCase) &&
-            !code.TrimStart().StartsWith("<?php", StringComparison.OrdinalIgnoreCase))
-        {
-            diagnostics.Add("La balise <?php doit etre placee au debut du script quand elle est utilisee.");
+            diagnostics.Add("Le code ne peut pas etre vide.");
         }
 
         var output = diagnostics.Count == 0
-            ? "Validation statique PHP/Symfony terminee."
+            ? "Validation statique terminee."
             : "";
 
         return Task.FromResult(new ExecutionResultDto(diagnostics.Count == 0, output, diagnostics, 0));
@@ -33,7 +27,7 @@ public sealed class PhpSymfonyValidationService
 
         if (!execution.Success)
         {
-            results.Add(new TestResultDto("Validation statique PHP/Symfony", false, string.Join("\n", execution.Diagnostics)));
+            results.Add(new TestResultDto("Validation statique", false, string.Join("\n", execution.Diagnostics)));
             return (execution, results, false);
         }
 
@@ -61,7 +55,7 @@ public sealed class PhpSymfonyValidationService
             LessonTestType.SqlForbiddenSnippet => !Contains(code, rule.RequiredSnippet)
                 ? Pass(rule.Name)
                 : Fail(rule.Name, $"Le code ne doit pas contenir: {rule.RequiredSnippet}"),
-            _ => Fail(rule.Name, "Type de validation PHP/Symfony inconnu.")
+            _ => Fail(rule.Name, "Type de validation statique inconnu.")
         };
     }
 
@@ -81,7 +75,7 @@ public sealed class PhpSymfonyValidationService
             LessonTestType.SqlForbiddenSnippet => !Contains(code, test.RequiredSnippet)
                 ? Pass(test.Name)
                 : Fail(test.Name, $"Le code ne doit pas contenir: {test.RequiredSnippet}"),
-            _ => Fail(test.Name, "Type de validation PHP/Symfony inconnu.")
+            _ => Fail(test.Name, "Type de validation statique inconnu.")
         };
     }
 

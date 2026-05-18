@@ -4221,18 +4221,25 @@ public static class SeedData
             ("php-symfony", "php-files", "Fichiers PHP", "Lire et ecrire des fichiers de donnees simples."),
             ("php-symfony", "php-json", "JSON PHP", "Retourner du JSON avec json_encode."),
             ("php-symfony", "php-pdo", "PDO PHP", "Acceder aux donnees avec PDO et requetes preparees."),
+            ("php-symfony", "symfony-framework", "Framework Symfony", "Comprendre ce qu'un framework apporte par rapport a PHP natif."),
             ("php-symfony", "symfony-project-structure", "Structure Symfony", "Identifier les dossiers et responsabilites d'un projet Symfony."),
             ("php-symfony", "symfony-routing", "Routing Symfony", "Declarer des routes."),
             ("php-symfony", "symfony-controller", "Controleurs Symfony", "Construire des controleurs."),
             ("php-symfony", "symfony-response", "Responses Symfony", "Retourner des reponses HTTP avec Symfony."),
+            ("php-symfony", "symfony-request", "Request Symfony", "Lire les donnees d'une requete HTTP avec l'objet Request."),
             ("php-symfony", "symfony-twig", "Twig Symfony", "Afficher les donnees dans des templates Twig."),
             ("php-symfony", "symfony-service", "Services Symfony", "Extraire la logique dans des services."),
+            ("php-symfony", "symfony-dependency-injection", "Injection de dependances Symfony", "Recevoir les collaborateurs par constructeur dans Symfony."),
+            ("php-symfony", "symfony-console", "Console Symfony", "Utiliser bin/console pour piloter le projet."),
             ("php-symfony", "symfony-doctrine", "Doctrine Symfony", "Modeliser et persister les entites."),
             ("php-symfony", "symfony-repository", "Repositories Symfony", "Regrouper les requetes Doctrine dans des repositories."),
             ("php-symfony", "symfony-form", "Formulaires Symfony", "Gerer des formulaires."),
             ("php-symfony", "symfony-validation", "Validation Symfony", "Valider les donnees metier."),
             ("php-symfony", "symfony-access-control", "Controle d'acces Symfony", "Proteger des actions avec des attributs d'autorisation."),
+            ("php-symfony", "symfony-security", "Securite Symfony", "Proteger les routes et raisonner sur roles, utilisateurs et CSRF."),
+            ("php-symfony", "symfony-api", "API Symfony", "Construire des endpoints JSON avec Symfony."),
             ("php-symfony", "symfony-crud", "CRUD Symfony", "Assembler les operations liste, detail, creation, edition et suppression."),
+            ("php-symfony", "symfony-project-architecture", "Architecture projet Symfony", "Assembler controller, service, repository, entite, Twig et API dans un projet coherent."),
             ("react", "react-jsx", "JSX React", "Ecrire une interface avec JSX."),
             ("react", "react-components", "Composants React", "Decouper l'interface en composants."),
             ("react", "react-props", "Props React", "Transmettre des donnees aux composants."),
@@ -5976,12 +5983,228 @@ public static class SeedData
             ]);
     }
 
-    private static PhpLessonSpec PhpSymfonyLessonSpecFor(string slug) =>
-        PhpNativeLessonSpecs().TryGetValue(slug, out var nativeSpec)
+    private static PhpLessonSpec PhpSymfonyLessonSpecFor(string slug)
+    {
+        var spec = PhpNativeLessonSpecs().TryGetValue(slug, out var nativeSpec)
             ? nativeSpec
-            : PhpSymfonyLessonSpecs.TryGetValue(slug, out var spec)
-                ? spec
-                : PhpSupplementalLessonSpec(slug);
+            : PhpSymfonyLessonSpecs.TryGetValue(slug, out var explicitSpec)
+                ? explicitSpec
+                : GeneratedSymfonyLessonSpecs().TryGetValue(slug, out var generatedSpec)
+                    ? generatedSpec
+                    : PhpSupplementalLessonSpec(slug);
+
+        return EnrichInteractivePhpSymfonySpec(slug, spec);
+    }
+
+    private static PhpLessonSpec EnrichInteractivePhpSymfonySpec(string slug, PhpLessonSpec spec)
+    {
+        var isSymfony = slug.StartsWith("symfony-", StringComparison.OrdinalIgnoreCase) || slug == "php-symfony-boss-final-products";
+        var family = isSymfony ? "Symfony Product Catalog" : "Product Catalog natif";
+        var previous = isSymfony
+            ? "Tu as deja vu le meme probleme en PHP natif: une requete arrive, le code decide quoi faire, puis une reponse repart."
+            : "Tu construis progressivement les briques PHP natives qui serviront ensuite a comprendre Symfony.";
+
+        var conceptSummary = spec.ConceptSummary.Contains("Situation", StringComparison.OrdinalIgnoreCase)
+            ? spec.ConceptSummary
+            : $"""
+              Situation concrete:
+              {family} avance par petites briques. Cette lecon part d'un besoin produit reel plutot que d'un mot-cle isole.
+
+              Objectif de competence:
+              {spec.Objective}
+
+              Mini-recapitulatif:
+              {spec.ConceptSummary}
+              """;
+
+        var explanation = spec.Explanation.Contains("Cours", StringComparison.OrdinalIgnoreCase)
+            ? spec.Explanation
+            : $"""
+              Cours:
+              {previous}
+
+              Pourquoi cette notion existe:
+              {spec.Explanation}
+
+              Explication pas a pas:
+              1. Identifie la responsabilite principale de la lecon.
+              2. Repere les donnees manipulees dans le Product Catalog.
+              3. Ecris un extrait court qui montre la notion dans du code exploitable.
+              4. Verifie ensuite les criteres statiques comme une liste de preuves, pas comme une phrase a copier.
+
+              Exemple commente:
+              L'exemple ci-dessous reste volontairement court pour isoler la notion avant l'exercice.
+
+              Lien avec le projet fil rouge:
+              Cette etape rapproche le mini-projet d'un catalogue produit maintenable: domaine, HTTP, affichage, persistance ou organisation selon la lecon.
+              """;
+
+        var exercisePrompt = spec.ExercisePrompt.Contains("Question rapide", StringComparison.OrdinalIgnoreCase)
+            ? spec.ExercisePrompt
+            : $"""
+              Situation concrete:
+              Tu ajoutes une brique au {family}.
+
+              Objectif de competence:
+              {spec.Objective}
+
+              Question rapide:
+              Quel probleme cette notion evite-t-elle dans un catalogue produit qui grandit?
+
+              Reponse attendue:
+              Elle evite de disperser une responsabilite dans du code fragile. La notion donne une forme claire a une donnee, une route, une reponse, une vue, une regle ou une persistance.
+
+              Manipulation guidee:
+              1. Lis le starter code et garde sa structure.
+              2. Ajoute d'abord la declaration principale attendue.
+              3. Relie cette declaration au cas Product Catalog.
+              4. Termine avec le retour, l'affichage ou la configuration demandee.
+
+              Exercice principal:
+              {spec.ExercisePrompt}
+
+              Contraintes explicites:
+              Le code doit contenir les elements attendus par la validation dans de vraies instructions.
+
+              Sortie ou comportement attendu:
+              {spec.SuccessFeedback}
+
+              Validation automatique:
+              La correction statique cherche une combinaison minimale: {string.Join(", ", spec.RequiredSnippets)}.
+
+              Recapitulatif:
+              Tu dois obtenir un extrait court, lisible et utile au Product Catalog.
+
+              Lien avec le mini-projet:
+              Cette lecon nourrit le meme fil rouge: construire un Product Catalog natif puis Symfony, sans sauter les etapes.
+              """;
+
+        var commonMistakes = spec.CommonMistakes.Contains("Erreur frequente", StringComparison.OrdinalIgnoreCase)
+            ? spec.CommonMistakes
+            : $"""
+              Erreur frequente 1:
+              Coller les mots attendus en commentaire au lieu de les utiliser dans le code.
+
+              Erreur frequente 2:
+              Repondre uniquement au resultat visible sans montrer la structure demandee.
+
+              Erreur frequente 3:
+              Oublier le lien avec le Product Catalog et produire un extrait trop generique.
+
+              Conseil:
+              {spec.CommonMistakes}
+              """;
+
+        return spec with
+        {
+            ConceptSummary = conceptSummary,
+            Explanation = explanation,
+            ExercisePrompt = exercisePrompt,
+            CommonMistakes = commonMistakes
+        };
+    }
+
+    private sealed record GeneratedSymfonyDefinition(
+        string Title,
+        string Objective,
+        string[] RequiredSnippets,
+        string FinalCorrection,
+        IReadOnlyList<(string Slug, int Weight)> Skills,
+        int XpReward = 60);
+
+    private static Dictionary<string, PhpLessonSpec> GeneratedSymfonyLessonSpecs() =>
+        GeneratedSymfonyLessonDefinitions().ToDictionary(
+            item => item.Key,
+            item =>
+            {
+                var definition = item.Value;
+                return new PhpLessonSpec(
+                    definition.Title,
+                    definition.Objective,
+                    $"Symfony prolonge le PHP natif: {definition.Objective}",
+                    $"Cette lecon montre comment Symfony structure une responsabilite que tu pourrais coder a la main en PHP natif. Le Product Catalog gagne une convention stable, une API claire et un code plus facile a verifier.",
+                    BuildGeneratedSymfonyExample(definition),
+                    $"Applique cette notion au Product Catalog. Le code doit prouver la competence suivante: {definition.Objective}",
+                    "<?php\n\n// TODO: complete cette brique Symfony du Product Catalog.\n",
+                    "La brique Symfony est presente, reliee au Product Catalog et exploitable.",
+                    $"Ajoute les elements attendus: {string.Join(", ", definition.RequiredSnippets.Take(5))}.",
+                    definition.XpReward,
+                    definition.RequiredSnippets,
+                    "Ne laisse pas la notion sous forme de commentaire: elle doit apparaitre dans du code Symfony ou de configuration utilisable.",
+                    definition.FinalCorrection);
+            },
+            StringComparer.OrdinalIgnoreCase);
+
+    private static string BuildGeneratedSymfonyExample(GeneratedSymfonyDefinition definition) =>
+        $"""
+        <?php
+
+        // Exemple independant pour isoler la notion.
+        // Objectif: {definition.Objective}
+        // La correction attendra ensuite une version appliquee au Product Catalog.
+        """;
+
+    private static Dictionary<string, GeneratedSymfonyDefinition> GeneratedSymfonyLessonDefinitions() => new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["symfony-why-framework"] = S("Pourquoi un framework", "Expliquer pourquoi Symfony remplace des conventions PHP natives repetitives.", ["Symfony", "framework", "routing", "controller"], "<?php\n\n// Symfony fournit routing, controllers, services et configuration pour organiser Product Catalog.\n", [("symfony-framework", 2), ("symfony-project-structure", 1)], 20),
+        ["symfony-public-index"] = S("public/index.php", "Comprendre le point d'entree HTTP unique d'une application Symfony.", ["public/index.php", "Kernel", "Request"], "<?php\n\n// public/index.php\nuse App\\Kernel;\nuse Symfony\\Component\\HttpFoundation\\Request;\n\n$kernel = new Kernel('dev', true);\n$request = Request::createFromGlobals();", [("symfony-framework", 1), ("symfony-request", 1), ("symfony-project-structure", 1)], 25),
+        ["symfony-request-response-flow"] = S("Cycle Request Response", "Relier requete HTTP, controller Symfony et reponse.", ["Request", "Response", "Controller"], "<?php\n\nuse Symfony\\Component\\HttpFoundation\\Request;\nuse Symfony\\Component\\HttpFoundation\\Response;\n\npublic function index(Request $request): Response\n{\n    return new Response('Products');\n}", [("symfony-request", 2), ("symfony-response", 1)], 30),
+        ["symfony-bin-console"] = S("bin/console", "Identifier le role de la console Symfony dans le projet.", ["bin/console", "debug:router", "make:"], "bin/console debug:router\nbin/console make:controller ProductController", [("symfony-console", 2), ("symfony-framework", 1)], 20),
+        ["symfony-env-file"] = S("Fichier .env", "Comprendre les variables d'environnement du projet Symfony.", [".env", "APP_ENV", "DATABASE_URL"], "APP_ENV=dev\nDATABASE_URL=\"sqlite:///%kernel.project_dir%/var/data.db\"", [("symfony-framework", 1), ("symfony-project-structure", 1)], 20),
+
+        ["symfony-controller-basic"] = S("Controller de base", "Creer une action controller qui retourne une Response.", ["Controller", "AbstractController", "Response", "return"], "<?php\n\nuse Symfony\\Bundle\\FrameworkBundle\\Controller\\AbstractController;\nuse Symfony\\Component\\HttpFoundation\\Response;\n\nfinal class ProductController extends AbstractController\n{\n    public function index(): Response\n    {\n        return new Response('Products');\n    }\n}", [("symfony-controller", 2), ("symfony-response", 1)], 35),
+        ["symfony-request-query"] = S("Query string Symfony", "Lire un filtre GET avec l'objet Request.", ["Request", "query", "get", "search"], "<?php\n\npublic function index(Request $request): Response\n{\n    $search = $request->query->get('search', '');\n    return new Response($search);\n}", [("symfony-request", 2), ("symfony-controller", 1)], 35),
+        ["symfony-request-post"] = S("POST Symfony", "Lire une donnee POST avec Request.", ["Request", "request", "get", "name"], "<?php\n\npublic function create(Request $request): Response\n{\n    $name = $request->request->get('name', '');\n    return new Response($name);\n}", [("symfony-request", 2), ("symfony-controller", 1)], 35),
+        ["symfony-redirect"] = S("Redirection Symfony", "Rediriger vers la liste produits apres une action.", ["redirectToRoute", "product_index", "return"], "<?php\n\nreturn $this->redirectToRoute('product_index');", [("symfony-response", 1), ("symfony-routing", 1), ("symfony-controller", 1)], 35),
+        ["symfony-not-found"] = S("404 Symfony", "Retourner une erreur 404 quand le produit est absent.", ["createNotFoundException", "throw", "Product"], "<?php\n\nif (!$product) {\n    throw $this->createNotFoundException('Product not found');\n}", [("symfony-controller", 1), ("symfony-response", 1)], 40),
+
+        ["symfony-twig-include"] = S("Include Twig", "Extraire une carte produit reutilisable avec include.", ["include", "product/_card.html.twig", "product"], "{{ include('product/_card.html.twig', { product: product }) }}", [("symfony-twig", 2), ("symfony-project-architecture", 1)], 35),
+        ["symfony-twig-layout"] = S("Layout Twig", "Utiliser un layout Twig commun.", ["extends", "base.html.twig", "block body"], "{% extends 'base.html.twig' %}\n{% block body %}\n    <h1>Products</h1>\n{% endblock %}", [("symfony-twig", 2), ("symfony-project-architecture", 1)], 35),
+        ["symfony-twig-product-card"] = S("Carte produit Twig", "Afficher name, price et stock dans une carte produit Twig.", ["product.name", "product.price", "product.stock"], "<article>\n    <h2>{{ product.name }}</h2>\n    <p>{{ product.price }} euros</p>\n    <p>{{ product.stock }}</p>\n</article>", [("symfony-twig", 2), ("symfony-crud", 1)], 35),
+
+        ["symfony-doctrine-why-orm"] = S("Pourquoi Doctrine ORM", "Comprendre comment Doctrine remplace le SQL repetitif pour les entites.", ["Doctrine", "Entity", "Repository"], "<?php\n\n// Doctrine mappe Product en table et ProductRepository regroupe les requetes.\n", [("symfony-doctrine", 2), ("symfony-repository", 1)], 35),
+        ["symfony-doctrine-find"] = S("find avec Doctrine", "Charger un produit par id depuis le repository.", ["ProductRepository", "find", "$id"], "<?php\n\n$product = $productRepository->find($id);", [("symfony-repository", 2), ("symfony-doctrine", 1)], 45),
+        ["symfony-doctrine-relations"] = S("Relation Doctrine simple", "Declarer une relation entre Product et Category.", ["ManyToOne", "Category", "private"], "<?php\n\n#[ORM\\ManyToOne]\nprivate ?Category $category = null;", [("symfony-doctrine", 2), ("php-oop", 1)], 50),
+
+        ["symfony-form-why"] = S("Pourquoi Symfony Form", "Comparer formulaire Symfony et lecture manuelle de POST.", ["Form", "Request", "validation"], "<?php\n\n// Symfony Form lit Request, hydrate Product et expose les erreurs de validation.\n", [("symfony-form", 2), ("symfony-request", 1)], 35),
+        ["symfony-form-product-create"] = S("Formulaire creation Product", "Assembler ProductType dans une action de creation.", ["createForm", "ProductType::class", "new Product", "handleRequest"], "<?php\n\n$product = new Product();\n$form = $this->createForm(ProductType::class, $product);\n$form->handleRequest($request);", [("symfony-form", 2), ("symfony-crud", 1)], 55),
+        ["symfony-form-product-edit"] = S("Formulaire edition Product", "Reutiliser ProductType pour modifier un produit existant.", ["Product $product", "createForm", "handleRequest", "flush"], "<?php\n\n$form = $this->createForm(ProductType::class, $product);\n$form->handleRequest($request);\n$entityManager->flush();", [("symfony-form", 1), ("symfony-crud", 2)], 55),
+
+        ["symfony-service-why"] = S("Pourquoi un service", "Comprendre pourquoi la logique metier sort du controller.", ["service", "controller", "ProductCatalogService"], "<?php\n\n// ProductCatalogService porte les cas d'usage; le controller gere HTTP.\n", [("symfony-service", 2), ("symfony-project-architecture", 1)], 40),
+        ["symfony-dependency-injection"] = S("Injection de dependances", "Recevoir un service par constructeur au lieu de le creer avec new.", ["__construct", "private", "ProductCatalogService"], "<?php\n\npublic function __construct(private ProductCatalogService $products) {}\n", [("symfony-dependency-injection", 2), ("symfony-service", 1)], 45),
+        ["symfony-dto"] = S("DTO Symfony", "Representer des donnees d'entree sans surcharger l'entite.", ["class", "ProductInput", "public string $name"], "<?php\n\nfinal class ProductInput\n{\n    public string $name = '';\n    public int $price = 0;\n}", [("symfony-service", 1), ("symfony-project-architecture", 1), ("php-oop", 1)], 45),
+        ["symfony-command"] = S("Commande Symfony", "Creer une commande console pour inspecter le catalogue.", ["Command", "AsCommand", "execute"], "<?php\n\n#[AsCommand(name: 'app:products:list')]\nfinal class ListProductsCommand extends Command\n{\n    protected function execute(InputInterface $input, OutputInterface $output): int\n    {\n        return Command::SUCCESS;\n    }\n}", [("symfony-console", 2), ("symfony-service", 1)], 50),
+
+        ["symfony-security-why"] = S("Pourquoi securiser", "Identifier les actions produit qui doivent etre protegees.", ["security", "ROLE_USER", "route"], "<?php\n\n// Les routes create, edit et delete du Product Catalog demandent un utilisateur connecte.\n", [("symfony-security", 2), ("symfony-crud", 1)], 35),
+        ["symfony-user-entity"] = S("Entity User", "Declarer une entite utilisateur minimale.", ["class User", "UserInterface", "getUserIdentifier"], "<?php\n\nfinal class User implements UserInterface\n{\n    public function getUserIdentifier(): string { return $this->email; }\n}", [("symfony-security", 2), ("symfony-doctrine", 1)], 50),
+        ["symfony-password-hashing"] = S("Hash password", "Hasher un mot de passe avant persistence.", ["UserPasswordHasherInterface", "hashPassword", "setPassword"], "<?php\n\n$hash = $passwordHasher->hashPassword($user, $plainPassword);\n$user->setPassword($hash);", [("symfony-security", 2), ("symfony-service", 1)], 50),
+        ["symfony-roles"] = S("Roles Symfony", "Representer les roles d'un utilisateur.", ["getRoles", "ROLE_USER", "array_unique"], "<?php\n\npublic function getRoles(): array\n{\n    return array_unique([...$this->roles, 'ROLE_USER']);\n}", [("symfony-security", 2), ("php-arrays", 1)], 45),
+        ["symfony-is-granted"] = S("isGranted", "Tester un droit dans un controller.", ["isGranted", "ROLE_ADMIN", "if"], "<?php\n\nif ($this->isGranted('ROLE_ADMIN')) {\n    return new Response('admin');\n}", [("symfony-security", 2), ("symfony-controller", 1)], 45),
+        ["symfony-deny-access-unless-granted"] = S("denyAccessUnlessGranted", "Bloquer une action si le role manque.", ["denyAccessUnlessGranted", "ROLE_USER"], "<?php\n\n$this->denyAccessUnlessGranted('ROLE_USER');", [("symfony-security", 2), ("symfony-controller", 1)], 45),
+        ["symfony-protected-route"] = S("Route protegee", "Proteger une route avec IsGranted.", ["IsGranted", "ROLE_USER", "#[Route"], "<?php\n\n#[Route('/products/new')]\n#[IsGranted('ROLE_USER')]\npublic function new(): Response\n{\n    return new Response('Protected');\n}", [("symfony-security", 2), ("symfony-routing", 1)], 50),
+        ["symfony-csrf-basic"] = S("CSRF simple", "Verifier un token CSRF sur une action sensible.", ["isCsrfTokenValid", "csrf_token", "delete"], "<?php\n\nif ($this->isCsrfTokenValid('delete'.$product->getId(), $request->request->get('_token'))) {\n    $entityManager->remove($product);\n}", [("symfony-security", 2), ("symfony-form", 1)], 55),
+
+        ["symfony-api-json-response"] = S("API JsonResponse", "Retourner une reponse JSON Symfony.", ["JsonResponse", "return new JsonResponse", "name"], "<?php\n\nreturn new JsonResponse(['name' => 'Book']);", [("symfony-api", 2), ("symfony-response", 1)], 45),
+        ["symfony-api-list-products"] = S("API liste produits", "Retourner les produits disponibles en JSON.", ["#[Route('/api/products'", "JsonResponse", "findAvailable"], "<?php\n\n#[Route('/api/products', methods: ['GET'])]\npublic function list(ProductRepository $products): JsonResponse\n{\n    return new JsonResponse($products->findAvailable());\n}", [("symfony-api", 2), ("symfony-repository", 1)], 55),
+        ["symfony-api-show-product"] = S("API detail produit", "Retourner un produit par id en JSON.", ["#[Route('/api/products/{id}'", "Product $product", "JsonResponse"], "<?php\n\n#[Route('/api/products/{id}', methods: ['GET'])]\npublic function show(Product $product): JsonResponse\n{\n    return new JsonResponse(['name' => $product->getName()]);\n}", [("symfony-api", 2), ("symfony-routing", 1)], 55),
+        ["symfony-api-create-product"] = S("API creation produit", "Creer un produit depuis une requete JSON.", ["Request", "json_decode", "persist", "JsonResponse"], "<?php\n\n$data = json_decode($request->getContent(), true);\n$product = new Product($data['name'], $data['price']);\n$entityManager->persist($product);\n$entityManager->flush();\nreturn new JsonResponse(['status' => 'created'], 201);", [("symfony-api", 2), ("symfony-crud", 1)], 65),
+        ["symfony-api-validation-errors"] = S("Erreurs validation API", "Retourner les erreurs de validation en JSON.", ["ValidatorInterface", "validate", "JsonResponse"], "<?php\n\n$errors = $validator->validate($product);\nif (count($errors) > 0) {\n    return new JsonResponse(['errors' => (string) $errors], 400);\n}", [("symfony-api", 1), ("symfony-validation", 2)], 60),
+        ["symfony-api-status-codes"] = S("Status codes API", "Choisir un code HTTP adapte a la reponse.", ["JsonResponse", "201", "404"], "<?php\n\nreturn new JsonResponse(['status' => 'created'], 201);\nreturn new JsonResponse(['error' => 'Not found'], 404);", [("symfony-api", 2), ("symfony-response", 1)], 45),
+        ["symfony-api-service-layer"] = S("API et service layer", "Deleguer la logique API au service ProductCatalogService.", ["ProductCatalogService", "createProduct", "JsonResponse"], "<?php\n\n$product = $catalog->createProduct($data['name'], $data['price']);\nreturn new JsonResponse($product->toArray(), 201);", [("symfony-api", 1), ("symfony-service", 2)], 65),
+
+        ["symfony-project-product-service"] = S("Service projet Product", "Ajouter ProductCatalogService dans le projet vertical Symfony.", ["ProductCatalogService", "__construct", "ProductRepository"], "<?php\n\nfinal readonly class ProductCatalogService\n{\n    public function __construct(private ProductRepository $products) {}\n}", [("symfony-service", 2), ("symfony-project-architecture", 1)], 70),
+        ["symfony-project-api-endpoint"] = S("Endpoint API projet", "Ajouter un endpoint JSON au Product Catalog complet.", ["#[Route('/api/products'", "JsonResponse", "ProductCatalogService"], "<?php\n\n#[Route('/api/products', methods: ['GET'])]\npublic function api(ProductCatalogService $catalog): JsonResponse\n{\n    return new JsonResponse($catalog->listAvailableProducts());\n}", [("symfony-api", 2), ("symfony-project-architecture", 1)], 75),
+        ["symfony-project-clean-architecture"] = S("Architecture propre projet", "Separer controller, service, repository, entite et vues.", ["Controller", "ProductCatalogService", "ProductRepository", "Product", "templates/product"], "<?php\n\n// Controller -> ProductCatalogService -> ProductRepository -> Product\n// templates/product affiche les donnees sans requete Doctrine directe.\n", [("symfony-project-architecture", 2), ("symfony-service", 1), ("symfony-crud", 1)], 80)
+    };
+
+    private static GeneratedSymfonyDefinition S(
+        string title,
+        string objective,
+        string[] requiredSnippets,
+        string finalCorrection,
+        IReadOnlyList<(string Slug, int Weight)> skills,
+        int xpReward = 60) =>
+        new(title, objective, requiredSnippets, finalCorrection, skills, xpReward);
 
     private sealed record PhpSupplementalDefinition(
         string Title,
@@ -6037,6 +6260,17 @@ public static class SeedData
             plans[item.Key] = new LessonPlan(item.Value.Skills, item.Value.Hints);
         }
 
+        foreach (var item in GeneratedSymfonyLessonDefinitions())
+        {
+            plans[item.Key] = new LessonPlan(
+                item.Value.Skills,
+                [
+                    $"Indice 1 - situation: applique `{item.Value.Title}` au Product Catalog Symfony.",
+                    $"Indice 2 - strategie: commence par {string.Join(", ", item.Value.RequiredSnippets.Take(2))}, puis relie-le a la responsabilite Symfony.",
+                    $"Indice 3 - verification: controle les criteres {string.Join(", ", item.Value.RequiredSnippets.Take(3))} dans du code exploitable."
+                ]);
+        }
+
         return plans;
     }
 
@@ -6061,10 +6295,25 @@ public static class SeedData
             {
                 var definition = item.Value;
                 var prompt = $"""
-                Contexte concret:
+                Situation concrete:
                 {definition.Context}
 
-                Objectif:
+                Objectif de competence:
+                {definition.Objective}
+
+                Question rapide:
+                Quelle donnee de depart dois-tu utiliser pour obtenir la sortie attendue, et pourquoi ne faut-il pas coder le resultat final en dur?
+
+                Reponse attendue:
+                Il faut partir des entrees imposees ({definition.Inputs}) afin que le code reste modifiable, verifiable et reutilisable dans le Product Catalog.
+
+                Manipulation guidee:
+                1. Lis le starter sans supprimer les lignes deja fournies.
+                2. Repere les donnees imposees.
+                3. Ajoute la transformation PHP demandee par la lecon.
+                4. Termine par la sortie ou la valeur attendue.
+
+                Exercice principal:
                 {definition.Objective}
 
                 Entrees imposees:
@@ -6073,32 +6322,106 @@ public static class SeedData
                 Sortie attendue:
                 {definition.ExpectedOutput}
 
-                Contraintes de code:
+                Validation automatique:
                 {definition.Constraints}
+
+                Recapitulatif:
+                Tu dois obtenir un code court, coherent et relie au Product Catalog natif.
+
+                Lien avec le mini-projet:
+                Cette brique sera reutilisee dans le catalogue produits natif: variables, tableaux, fonctions, domaine objet, HTTP, JSON ou persistance selon le module.
                 """;
 
                 return new PhpLessonSpec(
                     definition.Title,
                     definition.Objective,
-                    $"{definition.Title} transforme une situation metier en code PHP. Le contexte du cours est le suivant: {definition.Context}",
-                    $"Avant de coder, lis les donnees imposees et la sortie attendue. En PHP, tu construis souvent une petite etape intermediaire: declarer une variable, nettoyer une valeur, calculer un resultat, puis l'afficher ou le retourner. Ici, l'objectif est: {definition.Objective} Les contraintes indiquent les structures a utiliser, mais le plus important est le raisonnement: partir des entrees ({definition.Inputs}), appliquer la transformation demandee, puis obtenir {definition.ExpectedOutput}.",
-                    "<?php\n\n$products = [[\"name\" => \"Example\", \"price\" => 10, \"stock\" => 1]];\n// Exemple independant: manipule les donnees sans coder la reponse en dur.",
+                    BuildPhpConceptSummary(definition),
+                    BuildPhpExplanation(definition),
+                    BuildPhpCommentedExample(definition),
                     prompt,
                     definition.StarterCode,
-                    "La solution produit le comportement attendu avec les structures PHP demandees.",
-                    $"Il manque une partie de l'implementation. Retravaille surtout: {string.Join(", ", definition.RequiredSnippets.Take(4))}.",
+                    $"Competence validee: tu sais appliquer `{definition.Title}` dans le fil rouge Product Catalog.",
+                    $"La solution est incomplete. Repars de la situation, puis verifie les elements attendus: {string.Join(", ", definition.RequiredSnippets.Take(4))}.",
                     definition.XpReward,
                     definition.RequiredSnippets,
-                    "Erreur frequente 1: coder la sortie finale en dur au lieu d'utiliser les donnees imposees. Erreur frequente 2: suivre les mots-cles sans relier chaque ligne a l'objectif metier.",
+                    BuildPhpCommonMistakes(definition),
                     definition.FinalCorrection);
             },
             StringComparer.OrdinalIgnoreCase);
 
+    private static string BuildPhpConceptSummary(PhpNativeLessonDefinition definition) =>
+        $"""
+        Situation concrete:
+        {definition.Context}
+
+        Objectif de competence:
+        {definition.Objective}
+
+        Mini-recapitulatif:
+        Cette etape ajoute une brique au Product Catalog natif. Elle transforme une intention metier en code PHP lisible, testable et reutilisable.
+        """;
+
+    private static string BuildPhpExplanation(PhpNativeLessonDefinition definition) =>
+        $"""
+        Cours:
+        Avant d'ecrire le code, identifie trois choses: la donnee de depart, la transformation a appliquer et le resultat attendu. En PHP, une lecon utile ne consiste pas a placer un mot-cle au hasard: chaque instruction doit expliquer une petite decision du programme.
+
+        Situation:
+        {definition.Context}
+
+        Donnees imposees:
+        {definition.Inputs}
+
+        Raisonnement:
+        1. Repere les valeurs deja fournies ou a declarer.
+        2. Applique la notion de la lecon pour transformer ces valeurs.
+        3. Termine par une sortie, un retour ou une structure exploitable.
+
+        Resultat vise:
+        {definition.ExpectedOutput}
+
+        Lien avec le projet:
+        Dans le Product Catalog natif, cette notion servira ensuite a representer des produits, filtrer un catalogue, calculer un panier, exposer du JSON ou organiser le domaine.
+        """;
+
+    private static string BuildPhpCommentedExample(PhpNativeLessonDefinition definition) =>
+        $"""
+        <?php
+
+        // Exemple independant: on part d'un produit simple.
+        $product = ["name" => "Example", "price" => 10, "stock" => 1];
+
+        // Idee de la lecon:
+        // {definition.Objective}
+
+        // On garde l'exemple separe de la correction pour comprendre la notion
+        // avant de l'appliquer dans l'exercice.
+        echo $product["name"];
+        """;
+
+    private static string BuildPhpCommonMistakes(PhpNativeLessonDefinition definition) =>
+        $"""
+        Erreur frequente 1:
+        Coder directement `{definition.ExpectedOutput}` sans utiliser les donnees imposees.
+
+        Erreur frequente 2:
+        Ajouter les mots attendus en commentaire au lieu de les utiliser dans des instructions PHP.
+
+        Erreur frequente 3:
+        Oublier le lien metier: chaque ligne doit contribuer au Product Catalog, pas seulement satisfaire la validation statique.
+        """;
+
     private static Dictionary<string, PhpNativeLessonDefinition> PhpNativeLessonDefinitions() => new(StringComparer.OrdinalIgnoreCase)
     {
+        ["php-what-is-php"] = N("Qu'est-ce que PHP ?", "Tu decouvres le langage qui executera le backend du catalogue.", "Ecrire un premier fichier PHP qui affiche le role du serveur.", "Aucune variable fournie.", "`PHP prepare la reponse serveur`.", "Commencer par `<?php` et utiliser `echo` pour afficher la phrase.", "<?php\n\n// TODO: affiche le role de PHP dans le backend.\n", ["<?php", "echo", "PHP prepare la reponse serveur"], "<?php\n\necho \"PHP prepare la reponse serveur\";", [("php-syntax", 2), ("php-strings", 1)], 15),
         ["php-syntax-script"] = N("Script PHP minimal", "Tu crees le script d'accueil d'une boutique.", "Afficher exactement `Bienvenue dans Product Catalog`.", "Aucune variable fournie.", "`Bienvenue dans Product Catalog`.", "Commencer par `<?php`, utiliser `echo`, ne pas ecrire de HTML et terminer l'instruction par `;`.", "<?php\n\n// TODO: affiche le message d'accueil de la boutique.\n", ["<?php", "echo", "Bienvenue dans Product Catalog", ";"], "<?php\n\necho \"Bienvenue dans Product Catalog\";", [("php-syntax", 2), ("php-strings", 1)]),
+        ["php-echo-output"] = N("Afficher avec echo", "Tu veux envoyer une petite reponse texte au navigateur.", "Utiliser `echo` pour afficher `Product Catalog`.", "Texte impose: Product Catalog.", "`Product Catalog`.", "Utiliser `echo`, une chaine et un point-virgule.", "<?php\n\n// TODO: affiche le nom du projet.\n", ["echo", "Product Catalog", ";"], "<?php\n\necho \"Product Catalog\";", [("php-syntax", 1), ("php-strings", 2)], 15),
+        ["php-comments"] = N("Commentaires utiles", "Tu documentes une ligne qui initialise le catalogue.", "Ajouter un commentaire utile puis un echo executable.", "Message impose: Catalogue initialise.", "`Catalogue initialise`.", "Le commentaire doit aider a comprendre le code, puis `echo` doit faire le travail reel.", "<?php\n\n// TODO: ajoute un commentaire utile.\n// TODO: affiche le message.\n", ["//", "echo", "Catalogue initialise"], "<?php\n\n// Le catalogue demarre avec un message de verification serveur.\necho \"Catalogue initialise\";", [("php-syntax", 2), ("php-strings", 1)], 15),
         ["php-variables-product"] = N("Variables produit", "Tu developpes une fiche produit.", "Declarer `$name`, `$price`, `$stock`, puis afficher le prix du produit.", "`$name = \"Book\"`, `$price = 12`, `$stock = 3`.", "`Book coute 12 euros`.", "Utiliser les variables dans l'affichage et ne pas ecrire toute la phrase en dur.", "<?php\n\n// TODO: declare name, price et stock.\n// TODO: affiche la phrase avec les variables.\n", ["$name", "$price", "$stock", "\"Book\"", "12", "echo", "$name"], "<?php\n\n$name = \"Book\";\n$price = 12;\n$stock = 3;\n\necho $name . \" coute \" . $price . \" euros\";", [("php-variables", 2), ("php-strings", 1)]),
+        ["php-strings-output"] = N("Chaines et sortie produit", "Tu construis la phrase visible sur une fiche produit.", "Composer une chaine avec variables et concatenation pour afficher un libelle produit.", "`$name = \"Book\"`, `$price = 12`.", "`Product: Book - 12 euros`.", "Utiliser `$name`, `$price`, l'operateur `.`, et `echo` sans ecrire toute la phrase finale en dur.", "<?php\n\n$name = \"Book\";\n$price = 12;\n\n// TODO: compose et affiche le libelle produit.\n", ["$name", "$price", ".", "echo"], "<?php\n\n$name = \"Book\";\n$price = 12;\n\necho \"Product: \" . $name . \" - \" . $price . \" euros\";", [("php-strings", 2), ("php-variables", 1)]),
         ["php-strings"] = N("Chaines et concatenation", "Tu prepares le libelle d'un produit saisi avec des espaces autour du nom.", "Nettoyer le nom `\" Book \"` avec `trim`, le stocker dans `$name`, puis afficher `Product: Book` avec une concatenation.", "`$rawName = \" Book \"`.", "`Product: Book`.", "Utiliser `$name`, appeler `trim` sur la valeur fournie, utiliser l'operateur de concatenation `.`, puis afficher le resultat avec `echo`.", "<?php\n\n$rawName = \" Book \";\n\n// TODO: nettoie $rawName dans $name.\n// TODO: affiche Product: suivi du nom nettoye avec une concatenation.\n", ["$name", "trim", ".", "echo"], "<?php\n\n$rawName = \" Book \";\n$name = trim($rawName);\n\necho \"Product: \" . $name;", [("php-strings", 2), ("php-variables", 1)]),
+        ["php-numbers-price"] = N("Nombres et prix", "Tu calcules un prix TTC simple.", "Stocker un prix numerique puis calculer 20% de TVA.", "`$price = 10`.", "`12`.", "Utiliser un nombre, une multiplication et une variable de resultat.", "<?php\n\n$price = 10;\n\n// TODO: calcule le prix TTC.\n", ["$price", "$priceWithTax", "* 1.2", "echo"], "<?php\n\n$price = 10;\n$priceWithTax = $price * 1.2;\n\necho $priceWithTax;", [("php-types", 2), ("php-variables", 1)], 20),
+        ["php-booleans-stock"] = N("Booleens et stock", "Tu dois representer si un produit est disponible.", "Declarer un booleen `$isAvailable` depuis le stock.", "`$stock = 3`.", "`Disponible`.", "Utiliser une comparaison, une variable booleenne et une condition.", "<?php\n\n$stock = 3;\n\n// TODO: calcule la disponibilite.\n", ["$isAvailable", "$stock > 0", "if", "Disponible"], "<?php\n\n$stock = 3;\n$isAvailable = $stock > 0;\n\nif ($isAvailable) {\n    echo \"Disponible\";\n}", [("php-types", 1), ("php-conditions", 1)], 20),
         ["php-types-order"] = N("Types scalaires", "Tu representes une commande simple.", "Declarer les donnees scalaires d'une commande et afficher son resume.", "`$orderNumber`, `$quantity`, `$unitPrice`, `$isPaid`.", "`Commande CMD-001 : 3 articles`.", "Utiliser une string, un int, un float, un bool et composer l'affichage depuis les variables.", "<?php\n\n// TODO: declare les donnees de commande.\n// TODO: affiche le resume.\n", ["$orderNumber", "$quantity", "$unitPrice", "$isPaid", "true||false", "CMD-001", "echo"], "<?php\n\n$orderNumber = \"CMD-001\";\n$quantity = 3;\n$unitPrice = 12.5;\n$isPaid = true;\n\necho \"Commande \" . $orderNumber . \" : \" . $quantity . \" articles\";", [("php-types", 2), ("php-variables", 1)]),
         ["php-condition-stock"] = N("Condition de stock", "Tu affiches la disponibilite d'un produit.", "Afficher `Disponible` si le stock est positif, sinon `Rupture`.", "`$stock = 0`.", "`Rupture`.", "Utiliser `if`, `else` et tester `$stock > 0`.", "<?php\n\n$stock = 0;\n\n// TODO: ajoute la condition de disponibilite.\n", ["if", "else", "$stock > 0", "Disponible", "Rupture"], "<?php\n\n$stock = 0;\n\nif ($stock > 0) {\n    echo \"Disponible\";\n} else {\n    echo \"Rupture\";\n}", [("php-conditions", 2), ("php-types", 1)]),
         ["php-condition-discount"] = N("Remise conditionnelle", "Tu calcules le prix final d'un panier.", "Appliquer 10% de remise si le total atteint 100 euros.", "`$total = 120`.", "`Total final : 108`.", "Utiliser `$discount`, une condition, un calcul, et ne pas afficher directement 108 sans calcul.", "<?php\n\n$total = 120;\n$discount = 0;\n\n// TODO: calcule la remise si necessaire.\n// TODO: calcule puis affiche le total final.\n", ["$total", "$discount", "if", ">= 100", "*", "echo"], "<?php\n\n$total = 120;\n$discount = 0;\n\nif ($total >= 100) {\n    $discount = $total * 0.10;\n}\n\n$finalTotal = $total - $discount;\necho \"Total final : \" . $finalTotal;", [("php-conditions", 2), ("php-variables", 1)]),
@@ -6107,35 +6430,52 @@ public static class SeedData
         ["php-while-stock-decrease"] = N("Boucle while et decrementation", "Tu simules une sortie de stock.", "Afficher le stock restant tant qu'il est positif.", "`$stock = 3`.", "`Stock restant : 3`, puis 2, puis 1.", "Utiliser `while`, decremente `$stock` et eviter une boucle infinie.", "<?php\n\n$stock = 3;\n\n// TODO: affiche puis decremente le stock.\n", ["while", "$stock > 0", "$stock--||$stock -= 1", "echo"], "<?php\n\n$stock = 3;\n\nwhile ($stock > 0) {\n    echo \"Stock restant : \" . $stock;\n    $stock--;\n}", [("php-loops", 2), ("php-conditions", 1)]),
 
         ["php-array-product-names"] = N("Noms de produits", "Tu initialises les produits visibles d'un catalogue.", "Creer un tableau de noms et afficher le premier produit avec le total.", "Produits imposes: Book, Pen, Mug.", "`Book` et `3`.", "Utiliser `$products[0]` et `count($products)`.", "<?php\n\n// TODO: cree le tableau products.\n// TODO: affiche le premier produit et le nombre total.\n", ["$products", "\"Book\"", "\"Pen\"", "\"Mug\"", "$products[0]", "count($products)"], "<?php\n\n$products = [\"Book\", \"Pen\", \"Mug\"];\n\necho $products[0];\necho count($products);", [("php-arrays", 2), ("php-functions", 1)]),
+        ["php-array-access-index"] = N("Acces par index", "Tu affiches le deuxieme produit de la liste catalogue.", "Lire un element de tableau avec son index.", "`$products = [\"Book\", \"Pen\", \"Mug\"]`.", "`Pen`.", "Utiliser l'index 1 et ne pas ecrire `Pen` directement dans echo.", "<?php\n\n$products = [\"Book\", \"Pen\", \"Mug\"];\n\n// TODO: affiche le deuxieme produit.\n", ["$products[1]", "echo"], "<?php\n\n$products = [\"Book\", \"Pen\", \"Mug\"];\n\necho $products[1];", [("php-arrays", 2), ("php-variables", 1)], 25),
+        ["php-array-count-products"] = N("Compter les produits", "Tu veux afficher le nombre de produits du catalogue.", "Utiliser `count` pour compter les elements d'un tableau.", "`$products` contient 3 noms.", "`3 produits`.", "Utiliser `count($products)` dans la phrase.", "<?php\n\n$products = [\"Book\", \"Pen\", \"Mug\"];\n\n// TODO: affiche le nombre de produits.\n", ["count($products)", "echo", "$products"], "<?php\n\n$products = [\"Book\", \"Pen\", \"Mug\"];\n\necho count($products) . \" produits\";", [("php-arrays", 1), ("php-functions", 1)], 25),
         ["php-associative-product"] = N("Produit associatif", "Tu representes une fiche produit sans classe.", "Creer un tableau associatif produit et afficher son libelle prix.", "name => Book, price => 12, stock => 3.", "`Book - 12 euros`.", "Lire `name` et `price` depuis le tableau, pas depuis des variables separees.", "<?php\n\n$product = [\n    // TODO: name, price, stock\n];\n\n// TODO: affiche le libelle.\n", ["\"name\" => \"Book\"", "\"price\" => 12", "\"stock\" => 3", "$product[\"name\"]", "$product[\"price\"]"], "<?php\n\n$product = [\n    \"name\" => \"Book\",\n    \"price\" => 12,\n    \"stock\" => 3,\n];\n\necho $product[\"name\"] . \" - \" . $product[\"price\"] . \" euros\";", [("php-arrays", 2), ("php-types", 1)]),
         ["php-products-list"] = N("Liste de produits", "Tu construis une liste catalogue en tableaux associatifs.", "Creer 3 produits avec name, price, stock puis afficher chaque nom.", "Trois tableaux associatifs dans `$products`.", "Les trois noms de produits.", "Utiliser `foreach ($products as $product)` et `$product[\"name\"]`.", "<?php\n\n$products = [\n    // TODO: trois produits associatifs\n];\n\n// TODO: parcours la liste.\n", ["$products", "foreach", "as $product", "$product[\"name\"]", "echo"], "<?php\n\n$products = [\n    [\"name\" => \"Book\", \"price\" => 12, \"stock\" => 3],\n    [\"name\" => \"Pen\", \"price\" => 2, \"stock\" => 10],\n    [\"name\" => \"Mug\", \"price\" => 8, \"stock\" => 0],\n];\n\nforeach ($products as $product) {\n    echo $product[\"name\"];\n}", [("php-arrays", 2), ("php-loops", 1)]),
+        ["php-foreach-products"] = N("foreach produits", "Tu dois afficher chaque produit d'une liste sans gerer les index.", "Parcourir `$products` avec `foreach` et afficher chaque nom.", "`$products` contient des tableaux associatifs.", "Chaque nom de produit.", "Utiliser `foreach`, `as $product` et `$product[\"name\"]`.", "<?php\n\n$products = [[\"name\" => \"Book\"], [\"name\" => \"Pen\"]];\n\n// TODO: parcours la liste.\n", ["foreach", "as $product", "$product[\"name\"]", "echo"], "<?php\n\n$products = [[\"name\" => \"Book\"], [\"name\" => \"Pen\"]];\n\nforeach ($products as $product) {\n    echo $product[\"name\"];\n}", [("php-loops", 2), ("php-arrays", 1)], 30),
         ["php-filter-products-in-stock"] = N("Filtrer les produits en stock", "Tu affiches seulement les produits commandables.", "Parcourir la liste et afficher uniquement les produits avec stock positif.", "`$products` contient Book stock 3, Pen stock 0, Mug stock 5.", "`Book` et `Mug` uniquement.", "Utiliser `foreach`, `if`, `$product[\"stock\"] > 0`, et ne pas modifier le tableau initial.", "<?php\n\n$products = [\n    [\"name\" => \"Book\", \"price\" => 12, \"stock\" => 3],\n    [\"name\" => \"Pen\", \"price\" => 2, \"stock\" => 0],\n    [\"name\" => \"Mug\", \"price\" => 8, \"stock\" => 5],\n];\n\n// TODO: affiche seulement les produits en stock.\n", ["foreach", "if", "$product[\"stock\"] > 0", "$product[\"name\"]"], "<?php\n\n$products = [\n    [\"name\" => \"Book\", \"price\" => 12, \"stock\" => 3],\n    [\"name\" => \"Pen\", \"price\" => 2, \"stock\" => 0],\n    [\"name\" => \"Mug\", \"price\" => 8, \"stock\" => 5],\n];\n\nforeach ($products as $product) {\n    if ($product[\"stock\"] > 0) {\n        echo $product[\"name\"];\n    }\n}", [("php-arrays", 1), ("php-loops", 1), ("php-conditions", 1)]),
         ["php-compute-cart-total"] = N("Calcul total panier", "Tu calcules le montant d'une commande.", "Additionner price * quantity pour chaque ligne du panier.", "`$cart` contient des lignes avec `price` et `quantity`.", "Le total numerique calcule.", "Utiliser `$total = 0`, `foreach`, multiplication et `+=`.", "<?php\n\n$cart = [\n    [\"price\" => 12, \"quantity\" => 2],\n    [\"price\" => 5, \"quantity\" => 3],\n];\n\n$total = 0;\n// TODO: calcule le total.\n", ["$total = 0", "foreach", "$line[\"price\"]", "$line[\"quantity\"]", "*", "+="], "<?php\n\n$cart = [\n    [\"price\" => 12, \"quantity\" => 2],\n    [\"price\" => 5, \"quantity\" => 3],\n];\n\n$total = 0;\nforeach ($cart as $line) {\n    $total += $line[\"price\"] * $line[\"quantity\"];\n}\n\necho $total;", [("php-arrays", 1), ("php-loops", 1), ("php-variables", 1)]),
         ["php-array-map-product-labels"] = N("Labels avec array_map", "Tu prepares des labels pour une API ou un affichage.", "Transformer chaque produit en label `Name - price euros`.", "`$products` liste des produits associatifs.", "`Book - 12 euros` dans les labels.", "Utiliser `array_map`, une arrow function `fn`, et lire name/price.", "<?php\n\n$products = [[\"name\" => \"Book\", \"price\" => 12, \"stock\" => 3]];\n\n// TODO: cree $labels avec array_map.\n", ["array_map", "fn", "$product", "$product[\"name\"]", "$product[\"price\"]"], "<?php\n\n$products = [[\"name\" => \"Book\", \"price\" => 12, \"stock\" => 3]];\n\n$labels = array_map(fn($product) => $product[\"name\"] . \" - \" . $product[\"price\"] . \" euros\", $products);\nprint_r($labels);", [("php-array-functions", 1), ("php-functional-arrays", 2), ("php-arrays", 1)]),
         ["php-array-filter-available"] = N("Disponibles avec array_filter", "Tu prepares la liste filtrée d'un catalogue.", "Obtenir uniquement les produits avec stock positif.", "`$products` contient des stocks positifs et nuls.", "Un tableau `$availableProducts` sans rupture.", "Utiliser `array_filter`, `fn` et `$product[\"stock\"] > 0`.", "<?php\n\n$products = [[\"name\" => \"Book\", \"stock\" => 3], [\"name\" => \"Pen\", \"stock\" => 0]];\n\n// TODO: cree $availableProducts.\n", ["array_filter", "fn", "$product[\"stock\"] > 0"], "<?php\n\n$products = [[\"name\" => \"Book\", \"stock\" => 3], [\"name\" => \"Pen\", \"stock\" => 0]];\n\n$availableProducts = array_filter($products, fn($product) => $product[\"stock\"] > 0);\nprint_r($availableProducts);", [("php-array-functions", 1), ("php-functional-arrays", 2), ("php-arrays", 1)]),
         ["php-array-reduce-total"] = N("Total avec array_reduce", "Tu calcules un panier sans accumulateur externe mutable.", "Utiliser `array_reduce` pour calculer le total.", "`$cart` contient price et quantity.", "Le total numerique.", "Utiliser `$carry`, `$line`, price, quantity et multiplication.", "<?php\n\n$cart = [[\"price\" => 12, \"quantity\" => 2]];\n\n// TODO: calcule $total avec array_reduce.\n", ["array_reduce", "$carry", "$line", "$line[\"price\"]", "$line[\"quantity\"]"], "<?php\n\n$cart = [[\"price\" => 12, \"quantity\" => 2]];\n\n$total = array_reduce($cart, fn($carry, $line) => $carry + $line[\"price\"] * $line[\"quantity\"], 0);\necho $total;", [("php-array-functions", 1), ("php-functional-arrays", 2), ("php-arrays", 1)]),
+        ["php-sort-products-by-price"] = N("Tri par prix", "Tu ranges le catalogue du moins cher au plus cher.", "Trier une liste de produits avec `usort` sur le prix.", "`$products` contient des prix differents.", "Liste triee par prix croissant.", "Utiliser `usort`, `fn`, et comparer `$a[\"price\"] <=> $b[\"price\"]`.", "<?php\n\n$products = [[\"name\" => \"Book\", \"price\" => 12], [\"name\" => \"Pen\", \"price\" => 2]];\n\n// TODO: trie par prix.\n", ["usort", "fn", "$a[\"price\"] <=> $b[\"price\"]"], "<?php\n\n$products = [[\"name\" => \"Book\", \"price\" => 12], [\"name\" => \"Pen\", \"price\" => 2]];\n\nusort($products, fn($a, $b) => $a[\"price\"] <=> $b[\"price\"]);\nprint_r($products);", [("php-array-functions", 2), ("php-arrays", 1)], 35),
 
+        ["php-function-why"] = N("Pourquoi les fonctions", "Tu as deux affichages produit qui se ressemblent.", "Montrer qu'une fonction evite de dupliquer un format.", "Deux produits Book et Pen.", "Une fonction reutilisable.", "Declarer une fonction et l'appeler au moins deux fois.", "<?php\n\n// TODO: cree une fonction de formatage et reutilise-la.\n", ["function", "return", "formatProduct", "formatProduct("], "<?php\n\nfunction formatProduct(string $name, int $price): string\n{\n    return $name . \" - \" . $price . \" euros\";\n}\n\necho formatProduct(\"Book\", 12);\necho formatProduct(\"Pen\", 2);", [("php-functions", 2), ("php-strings", 1)], 30),
         ["php-function-format-product"] = N("Formatter un produit", "Tu extrais le formatage d'une fiche produit.", "Creer `formatProduct(array $product): string`.", "`$product = [\"name\" => \"Book\", \"price\" => 12]`.", "`Book - 12 euros` retourne par la fonction.", "Utiliser une fonction typee, `return`, name et price.", "<?php\n\n$product = [\"name\" => \"Book\", \"price\" => 12];\n\nfunction formatProduct(array $product): string\n{\n    // TODO\n}\n", ["function formatProduct", "array $product", ": string", "return", "$product[\"name\"]", "$product[\"price\"]"], "<?php\n\n$product = [\"name\" => \"Book\", \"price\" => 12];\n\nfunction formatProduct(array $product): string\n{\n    return $product[\"name\"] . \" - \" . $product[\"price\"] . \" euros\";\n}\n\necho formatProduct($product);", [("php-functions", 2), ("php-arrays", 1)]),
+        ["php-function-parameters"] = N("Parametres de fonction", "Tu veux formater n'importe quel produit sans dependance externe.", "Recevoir `$name` et `$price` en parametres.", "Nom et prix passes a l'appel.", "`Book - 12 euros`.", "Utiliser deux parametres types et les reutiliser dans le retour.", "<?php\n\nfunction formatProduct(string $name, int $price): string\n{\n    // TODO\n}\n", ["string $name", "int $price", "return", "$name", "$price"], "<?php\n\nfunction formatProduct(string $name, int $price): string\n{\n    return $name . \" - \" . $price . \" euros\";\n}", [("php-functions", 2), ("php-types", 1)], 30),
+        ["php-function-return"] = N("Retour de fonction", "Tu veux reutiliser un label produit ailleurs qu'a l'ecran.", "Retourner une chaine avec `return` au lieu de faire seulement `echo`.", "`$product = [\"name\" => \"Book\"]`.", "Une chaine retournee.", "Utiliser `return` dans la fonction puis echo a l'exterieur.", "<?php\n\nfunction productLabel(array $product): string\n{\n    // TODO\n}\n\n// TODO: affiche le retour.\n", ["function productLabel", ": string", "return", "echo productLabel"], "<?php\n\nfunction productLabel(array $product): string\n{\n    return \"Product: \" . $product[\"name\"];\n}\n\necho productLabel([\"name\" => \"Book\"]);", [("php-functions", 2), ("php-arrays", 1)], 30),
         ["php-function-is-available"] = N("Fonction disponibilite", "Tu nommes la regle de stock.", "Creer `isAvailable(array $product): bool`.", "`$product` contient une cle stock.", "`true` si stock > 0.", "Retourner une comparaison, ne pas faire un echo.", "<?php\n\nfunction isAvailable(array $product): bool\n{\n    // TODO\n}\n", ["function isAvailable", "array $product", ": bool", "return", "$product[\"stock\"] > 0"], "<?php\n\nfunction isAvailable(array $product): bool\n{\n    return $product[\"stock\"] > 0;\n}", [("php-functions", 2), ("php-conditions", 1)]),
         ["php-function-calculate-total"] = N("Fonction total panier", "Tu rends le calcul panier reutilisable.", "Creer `calculateCartTotal(array $cart): float`.", "`$cart` contient des lignes price/quantity.", "Le total du panier retourne.", "Utiliser `$total`, `foreach`, multiplication et `return $total`.", "<?php\n\nfunction calculateCartTotal(array $cart): float\n{\n    $total = 0;\n    // TODO\n}\n", ["function calculateCartTotal", "array $cart", ": float", "foreach", "return $total"], "<?php\n\nfunction calculateCartTotal(array $cart): float\n{\n    $total = 0;\n    foreach ($cart as $line) {\n        $total += $line[\"price\"] * $line[\"quantity\"];\n    }\n\n    return $total;\n}", [("php-functions", 2), ("php-arrays", 1)]),
         ["php-function-default-parameters"] = N("Parametres par defaut", "Tu formates un prix avec devise optionnelle.", "Creer `formatPrice(float $price, string $currency = \"EUR\"): string`.", "`$price` et devise optionnelle.", "`12 EUR` par defaut.", "Utiliser un parametre par defaut et un retour string.", "<?php\n\nfunction formatPrice(float $price, string $currency = \"EUR\"): string\n{\n    // TODO\n}\n", ["function formatPrice", "float $price", "string $currency =", ": string"], "<?php\n\nfunction formatPrice(float $price, string $currency = \"EUR\"): string\n{\n    return $price . \" \" . $currency;\n}", [("php-functions", 2), ("php-types", 1)]),
         ["php-function-named-arguments"] = N("Arguments nommes", "Tu appelles une fabrique produit de facon lisible.", "Appeler `createProduct` avec `name:`, `price:`, `stock:`.", "Fonction `createProduct` disponible.", "Un produit cree avec les valeurs imposees.", "Utiliser les arguments nommes PHP 8.", "<?php\n\nfunction createProduct(string $name, float $price, int $stock): array { return compact(\"name\", \"price\", \"stock\"); }\n\n// TODO: appelle createProduct avec arguments nommes.\n", ["name:", "price:", "stock:"], "<?php\n\nfunction createProduct(string $name, float $price, int $stock): array { return compact(\"name\", \"price\", \"stock\"); }\n\n$product = createProduct(name: \"Book\", price: 12, stock: 3);", [("php-functions", 1), ("php-modern-types", 2)]),
         ["php-closure-discount"] = N("Closure de remise", "Tu prepares une regle de remise injectable.", "Creer `$applyDiscount` qui recoit un prix et retourne le prix remise.", "`$price = 120`.", "`108` apres remise de 10%.", "Utiliser une closure `function`, `return` et une multiplication.", "<?php\n\n// TODO: cree $applyDiscount.\n", ["$applyDiscount", "function", "return", "*"], "<?php\n\n$applyDiscount = function (float $price): float {\n    return $price * 0.9;\n};\n\necho $applyDiscount(120);", [("php-functions", 2), ("php-modern-types", 1)]),
         ["php-arrow-function-tax"] = N("Arrow function TVA", "Tu appliques la TVA a un prix catalogue.", "Creer une arrow function qui ajoute 20% de TVA.", "`$price = 10`.", "`12`.", "Utiliser `fn`, `=>` et `* 1.2`.", "<?php\n\n// TODO: cree $withTax.\n", ["fn", "=>", "* 1.2"], "<?php\n\n$withTax = fn(float $price): float => $price * 1.2;\necho $withTax(10);", [("php-functions", 1), ("php-modern-types", 2)]),
+        ["php-function-refactor-duplicated-code"] = N("Refactorer du code duplique", "Tu vois le meme format produit dans deux pages.", "Extraire la logique repetee dans une fonction `formatProduct`.", "Deux tableaux produits.", "Une fonction appelee pour chaque produit.", "Declarer la fonction une fois, retourner le label, puis l'appeler deux fois.", "<?php\n\n$productA = [\"name\" => \"Book\", \"price\" => 12];\n$productB = [\"name\" => \"Pen\", \"price\" => 2];\n\n// TODO: evite la duplication.\n", ["function formatProduct", "return", "formatProduct($productA)", "formatProduct($productB)"], "<?php\n\n$productA = [\"name\" => \"Book\", \"price\" => 12];\n$productB = [\"name\" => \"Pen\", \"price\" => 2];\n\nfunction formatProduct(array $product): string\n{\n    return $product[\"name\"] . \" - \" . $product[\"price\"] . \" euros\";\n}\n\necho formatProduct($productA);\necho formatProduct($productB);", [("php-functions", 2), ("php-arrays", 1)], 35),
 
         ["php-strict-types"] = N("Strict types", "Tu prepares un fichier metier strict.", "Ajouter `declare(strict_types=1);` et une fonction typee.", "Prix produit numerique.", "Une valeur retournee par une fonction typee.", "Placer declare apres `<?php` et typer parametre/retour.", "<?php\n\n// TODO: active strict_types et cree une fonction typee.\n", ["declare(strict_types=1);", "function", ":"], "<?php\n\ndeclare(strict_types=1);\n\nfunction normalizePrice(float $price): float\n{\n    return $price;\n}", [("php-modern-types", 2), ("php-types", 1)]),
+        ["php-scalar-type-hints"] = N("Types scalaires en parametres", "Tu veux clarifier les donnees d'une fonction metier.", "Typer les parametres `string`, `float` et `int`.", "Nom, prix et stock d'un produit.", "Signature claire.", "Utiliser des types scalaires dans la signature.", "<?php\n\n// TODO: type les parametres.\n", ["function createProduct", "string $name", "float $price", "int $stock"], "<?php\n\nfunction createProduct(string $name, float $price, int $stock): array\n{\n    return compact(\"name\", \"price\", \"stock\");\n}", [("php-modern-types", 2), ("php-types", 1)], 35),
+        ["php-return-types"] = N("Types de retour", "Tu veux garantir ce que renvoie une fonction prix.", "Ajouter un type de retour `: float`.", "`$price = 10`.", "Nombre flottant retourne.", "Utiliser `: float` et `return`.", "<?php\n\nfunction withTax(float $price)\n{\n    // TODO\n}\n", ["function withTax", ": float", "return"], "<?php\n\nfunction withTax(float $price): float\n{\n    return $price * 1.2;\n}", [("php-modern-types", 2), ("php-functions", 1)], 35),
         ["php-nullable-types"] = N("Types nullable", "Tu recherches un produit qui peut ne pas exister.", "Creer `findProductName(int $id): ?string`.", "`$id` de produit.", "Un nom ou `null`.", "Utiliser `?string` et `return null`.", "<?php\n\nfunction findProductName(int $id): ?string\n{\n    // TODO\n}\n", ["?string", "return null"], "<?php\n\nfunction findProductName(int $id): ?string\n{\n    return $id === 1 ? \"Book\" : null;\n}", [("php-modern-types", 2), ("php-types", 1)]),
         ["php-union-types"] = N("Union types", "Tu acceptes un identifiant venant d'une URL ou d'une base.", "Creer une fonction qui accepte `int|string $id`.", "`$id` peut etre 12 ou \"SKU-12\".", "Identifiant normalise.", "Utiliser `int|string` dans la signature.", "<?php\n\nfunction normalizeProductId(int|string $id): string\n{\n    // TODO\n}\n", ["int|string", "$id"], "<?php\n\nfunction normalizeProductId(int|string $id): string\n{\n    return (string) $id;\n}", [("php-modern-types", 2), ("php-types", 1)]),
+        ["php-match-expression"] = N("Expression match moderne", "Tu traduis un statut court en libelle lisible.", "Utiliser `match` comme expression qui retourne une valeur.", "`$status = \"paid\"`.", "`Payee`.", "Assigner le resultat de `match` dans `$label`.", "<?php\n\n$status = \"paid\";\n\n// TODO: cree $label avec match.\n", ["$label", "match", "=>", "default"], "<?php\n\n$status = \"paid\";\n$label = match ($status) {\n    \"paid\" => \"Payee\",\n    \"pending\" => \"En attente\",\n    default => \"Inconnu\",\n};\n\necho $label;", [("php-modern-types", 2), ("php-conditions", 1)], 35),
         ["php-readonly-product"] = N("Produit readonly", "Tu crees un DTO produit immuable.", "Creer une classe avec proprietes `readonly`.", "Nom et prix recus au constructeur.", "Objet dont le nom ne change plus apres construction.", "Utiliser `readonly`, `public`, `string $name`.", "<?php\n\nfinal class ProductView\n{\n    // TODO\n}\n", ["readonly", "public", "string $name"], "<?php\n\nfinal class ProductView\n{\n    public function __construct(public readonly string $name, public readonly float $price) {}\n}", [("php-readonly", 2), ("php-modern-types", 1), ("php-oop", 1)]),
         ["php-enum-order-status"] = N("Enum OrderStatus", "Tu modelises les statuts d'une commande.", "Creer `enum OrderStatus: string` avec Pending, Paid, Cancelled.", "Statuts metier imposes.", "Une enum PHP valide.", "Utiliser les trois cases demandees.", "<?php\n\n// TODO: declare enum OrderStatus.\n", ["enum OrderStatus: string", "case Pending", "case Paid", "case Cancelled"], "<?php\n\nenum OrderStatus: string\n{\n    case Pending = \"pending\";\n    case Paid = \"paid\";\n    case Cancelled = \"cancelled\";\n}", [("php-enums", 2), ("php-modern-types", 1)]),
         ["php-match-with-enum"] = N("Match avec enum", "Tu transformes une enum en message client.", "Utiliser `match` avec `OrderStatus::Paid`.", "`$status = OrderStatus::Paid`.", "`Commande payee`.", "Couvrir Pending, Paid et default.", "<?php\n\n$status = OrderStatus::Paid;\n\n// TODO: cree $message avec match.\n", ["match", "OrderStatus::Paid", "OrderStatus::Pending", "default"], "<?php\n\n$status = OrderStatus::Paid;\n$message = match ($status) {\n    OrderStatus::Pending => \"Commande en attente\",\n    OrderStatus::Paid => \"Commande payee\",\n    default => \"Statut inconnu\",\n};", [("php-enums", 1), ("php-modern-types", 2)]),
         ["php-date-time-immutable"] = N("DateTimeImmutable", "Tu dates une commande sans muter l'objet.", "Creer une date de commande et la formatter.", "Date courante.", "Une date formatee.", "Utiliser `DateTimeImmutable` et `format`.", "<?php\n\n// TODO: cree $orderedAt et affiche la date.\n", ["DateTimeImmutable", "format"], "<?php\n\n$orderedAt = new DateTimeImmutable();\necho $orderedAt->format(\"Y-m-d\");", [("php-date-time", 2), ("php-modern-types", 1)]),
         ["php-string-functions-clean-input"] = N("Nettoyage de saisie", "Tu nettoies une recherche utilisateur.", "Nettoyer une saisie avec `trim`, `strtolower`, `str_contains`.", "`$search = \"  BOOK  \"`.", "Recherche normalisee et testee.", "Utiliser les trois fonctions demandees.", "<?php\n\n$search = \"  BOOK  \";\n\n// TODO: nettoie puis teste la saisie.\n", ["trim", "strtolower", "str_contains"], "<?php\n\n$search = \"  BOOK  \";\n$normalized = strtolower(trim($search));\n$containsBook = str_contains($normalized, \"book\");", [("php-strings", 2), ("php-functions", 1)]),
+        ["php-null-coalescing"] = N("Null coalescing", "Tu lis un parametre optionnel de recherche.", "Utiliser `??` pour fournir une valeur par defaut.", "`$_GET[\"search\"]` peut manquer.", "Recherche vide par defaut.", "Utiliser `$_GET`, `??` et `$search`.", "<?php\n\n// TODO: lis search avec valeur par defaut.\n", ["$_GET", "??", "$search"], "<?php\n\n$search = $_GET[\"search\"] ?? \"\";\necho $search;", [("php-modern-types", 1), ("php-http", 1)], 35),
+        ["php-spread-operator"] = N("Spread operator", "Tu ajoutes un produit a une liste sans modifier l'originale.", "Utiliser `...` pour creer un nouveau tableau.", "`$products` contient Book.", "Nouveau tableau avec Book et Pen.", "Utiliser `...$products` dans un tableau.", "<?php\n\n$products = [[\"name\" => \"Book\"]];\n$newProduct = [\"name\" => \"Pen\"];\n\n// TODO: cree $updatedProducts.\n", ["...$products", "$updatedProducts", "$newProduct"], "<?php\n\n$products = [[\"name\" => \"Book\"]];\n$newProduct = [\"name\" => \"Pen\"];\n\n$updatedProducts = [...$products, $newProduct];\nprint_r($updatedProducts);", [("php-modern-types", 1), ("php-arrays", 1)], 35),
 
+        ["php-oop-why-objects"] = N("Pourquoi les objets", "Tu veux eviter de disperser les regles produit dans des tableaux partout.", "Expliquer la brique `Product` avec une classe simple.", "Nom, prix et stock d'un produit.", "Classe Product comme modele metier.", "Declarer une classe Product et montrer qu'elle regroupe les donnees.", "<?php\n\n// TODO: cree le modele Product minimal.\n", ["class Product", "private", "__construct"], "<?php\n\nfinal class Product\n{\n    public function __construct(private string $name, private float $price, private int $stock) {}\n}", [("php-oop", 2), ("php-project-structure", 1)], 35),
         ["php-oop-product-class"] = N("Classe Product professionnelle", "Tu poses le modele objet du catalogue.", "Creer `final class Product` avec name, price, stock.", "Donnees produit typees.", "Classe avec proprietes privees.", "Utiliser les trois proprietes typees et privees.", "<?php\n\n// TODO: declare Product.\n", ["final class Product", "private string $name", "private float $price", "private int $stock"], "<?php\n\nfinal class Product\n{\n    private string $name;\n    private float $price;\n    private int $stock;\n}", [("php-oop", 2), ("php-types", 1)]),
+        ["php-oop-properties"] = N("Proprietes Product", "Tu ajoutes les donnees internes du produit.", "Declarer des proprietes privees typees.", "name, price, stock.", "Etat interne protege.", "Utiliser `private` et des types scalaires.", "<?php\n\nfinal class Product\n{\n    // TODO: proprietes\n}\n", ["private string $name", "private float $price", "private int $stock"], "<?php\n\nfinal class Product\n{\n    private string $name;\n    private float $price;\n    private int $stock;\n}", [("php-oop", 2), ("php-types", 1)], 35),
+        ["php-oop-constructor"] = N("Constructeur Product", "Tu veux creer un produit toujours initialise.", "Ajouter `__construct` pour recevoir name, price et stock.", "Trois valeurs obligatoires.", "Constructeur complet.", "Utiliser `__construct` et assigner les proprietes.", "<?php\n\nfinal class Product\n{\n    private string $name;\n    private float $price;\n    private int $stock;\n\n    // TODO: constructeur\n}\n", ["__construct", "$this->name", "$this->price", "$this->stock"], "<?php\n\nfinal class Product\n{\n    private string $name;\n    private float $price;\n    private int $stock;\n\n    public function __construct(string $name, float $price, int $stock)\n    {\n        $this->name = $name;\n        $this->price = $price;\n        $this->stock = $stock;\n    }\n}", [("php-oop", 2), ("php-functions", 1)], 35),
         ["php-oop-constructor-promotion"] = N("Constructeur promu", "Tu initialises Product proprement.", "Creer un constructeur avec promotion de proprietes.", "name, price, stock recus au constructeur.", "Objet Product initialise.", "Utiliser `public function __construct` et des parametres promus prives.", "<?php\n\nfinal class Product\n{\n    // TODO\n}\n", ["public function __construct", "private string $name", "private float $price", "private int $stock"], "<?php\n\nfinal class Product\n{\n    public function __construct(private string $name, private float $price, private int $stock) {}\n}", [("php-oop", 2), ("php-modern-types", 1)]),
         ["php-oop-getters"] = N("Getters Product", "Tu exposes Product sans casser l'encapsulation.", "Ajouter `getName`, `getPrice`, `getStock`.", "Proprietes privees existantes.", "Valeurs accessibles par methodes.", "Chaque getter doit etre public et type.", "<?php\n\nfinal class Product\n{\n    public function __construct(private string $name, private float $price, private int $stock) {}\n\n    // TODO: getters\n}\n", ["getName(): string", "getPrice(): float", "getStock(): int"], "<?php\n\nfinal class Product\n{\n    public function __construct(private string $name, private float $price, private int $stock) {}\n    public function getName(): string { return $this->name; }\n    public function getPrice(): float { return $this->price; }\n    public function getStock(): int { return $this->stock; }\n}", [("php-oop", 2), ("php-functions", 1)]),
         ["php-oop-business-method"] = N("Methode metier Product", "Tu places la disponibilite dans le domaine.", "Ajouter `isAvailable(): bool`.", "Product contient `stock`.", "`true` si stock > 0.", "Utiliser `$this->stock > 0`.", "<?php\n\nfinal class Product\n{\n    public function __construct(private int $stock) {}\n\n    // TODO\n}\n", ["function isAvailable", ": bool", "$this->stock > 0"], "<?php\n\nfinal class Product\n{\n    public function __construct(private int $stock) {}\n    public function isAvailable(): bool { return $this->stock > 0; }\n}", [("php-oop", 2), ("php-conditions", 1)]),
+        ["php-oop-encapsulation"] = N("Encapsulation", "Tu proteges l'etat interne de Product.", "Garder les proprietes privees et exposer des getters.", "Proprietes name et price.", "Acces controle par methodes.", "Utiliser `private` et `public function getName`.", "<?php\n\nfinal class Product\n{\n    // TODO: encapsule name.\n}\n", ["private string $name", "public function getName", "return $this->name"], "<?php\n\nfinal class Product\n{\n    public function __construct(private string $name) {}\n\n    public function getName(): string\n    {\n        return $this->name;\n    }\n}", [("php-oop", 2), ("php-functions", 1)], 40),
         ["php-oop-guard-negative-price"] = N("Garde prix negatif", "Tu proteges les invariants produit.", "Lever une exception si le prix est negatif.", "`$price` recu au constructeur.", "Exception pour prix invalide.", "Utiliser `if`, `$price < 0`, `throw new`, `InvalidArgumentException`.", "<?php\n\nfinal class Product\n{\n    public function __construct(private float $price)\n    {\n        // TODO\n    }\n}\n", ["if", "$price < 0", "throw new", "InvalidArgumentException"], "<?php\n\nfinal class Product\n{\n    public function __construct(private float $price)\n    {\n        if ($price < 0) {\n            throw new InvalidArgumentException(\"Price cannot be negative\");\n        }\n    }\n}", [("php-exceptions", 2), ("php-oop", 1)]),
         ["php-oop-custom-exception"] = N("Exception metier prix", "Tu nommes explicitement une erreur domaine.", "Creer `InvalidProductPriceException`.", "Aucune entree runtime.", "Classe exception dediee.", "Etendre `Exception` ou `InvalidArgumentException`.", "<?php\n\n// TODO: declare l'exception metier.\n", ["class InvalidProductPriceException", "extends", "Exception||InvalidArgumentException"], "<?php\n\nclass InvalidProductPriceException extends InvalidArgumentException\n{\n}", [("php-exceptions", 2), ("php-oop", 1)]),
         ["php-oop-interface"] = N("Interface repository", "Tu definis le contrat de lecture catalogue.", "Creer `ProductRepositoryInterface` avec `findAvailable(): array`.", "Aucune implementation encore.", "Interface utilisable par un service.", "Utiliser `interface` et une methode publique typee.", "<?php\n\n// TODO: interface repository.\n", ["interface ProductRepositoryInterface", "public function findAvailable", ": array"], "<?php\n\ninterface ProductRepositoryInterface\n{\n    public function findAvailable(): array;\n}", [("php-interfaces", 2), ("php-oop", 1)]),
@@ -6144,30 +6484,44 @@ public static class SeedData
         ["php-oop-abstract-class"] = N("Classe abstraite formatter", "Tu prepares une famille de formatters.", "Creer `AbstractFormatter` avec methode abstraite `format`.", "Aucune donnee concrete.", "Contrat partiellement factorise.", "Utiliser `abstract class` et `abstract public function format`.", "<?php\n\n// TODO\n", ["abstract class", "abstract public function format"], "<?php\n\nabstract class AbstractFormatter\n{\n    abstract public function format(Product $product): string;\n}", [("php-inheritance", 2), ("php-oop", 1)]),
         ["php-oop-trait"] = N("Trait Timestampable", "Tu factorises une date de creation.", "Creer `TimestampableTrait`.", "Date de creation.", "Trait avec DateTimeImmutable.", "Utiliser `trait`, `createdAt`, `DateTimeImmutable`.", "<?php\n\n// TODO\n", ["trait TimestampableTrait", "createdAt", "DateTimeImmutable"], "<?php\n\ntrait TimestampableTrait\n{\n    private DateTimeImmutable $createdAt;\n\n    public function markCreated(): void\n    {\n        $this->createdAt = new DateTimeImmutable();\n    }\n}", [("php-oop", 1), ("php-date-time", 1)]),
         ["php-oop-try-catch"] = N("try/catch produit", "Tu geres une operation produit qui peut echouer.", "Encadrer une operation avec `try`, traiter l'erreur avec `catch`, puis executer un nettoyage avec `finally`.", "Une exception peut etre lancee pendant l'operation.", "Message d'erreur gere puis bloc final execute.", "Utiliser `try`, `catch` et `finally` dans de vraies instructions PHP.", "<?php\n\n// TODO: ajoute try, catch et finally.\n", ["try", "catch", "finally"], "<?php\n\ntry {\n    throw new Exception(\"Error\");\n} catch (Exception $exception) {\n    echo $exception->getMessage();\n} finally {\n    echo \"Done\";\n}", [("php-exceptions", 2), ("php-oop", 1)]),
+        ["php-oop-composition-over-inheritance"] = N("Composition plutot qu'heritage", "Tu assembles un service avec un repository au lieu d'heriter de lui.", "Recevoir un collaborateur par constructeur.", "Repository produit.", "Service compose.", "Utiliser une propriete privee repository et deleguer un appel.", "<?php\n\nfinal class ProductCatalogService\n{\n    // TODO: compose avec un repository.\n}\n", ["__construct", "private ProductRepositoryInterface", "$this->products"], "<?php\n\nfinal class ProductCatalogService\n{\n    public function __construct(private ProductRepositoryInterface $products) {}\n\n    public function listAvailableProducts(): array\n    {\n        return $this->products->findAvailable();\n    }\n}", [("php-composition", 2), ("php-interfaces", 1)], 45),
 
+        ["php-project-structure-src-public"] = N("Structure src/public", "Tu separes le code metier et le point d'entree web.", "Lister `src/`, `public/` et `composer.json`.", "Projet PHP natif.", "Structure minimale.", "Faire apparaitre les dossiers attendus.", "// TODO: indique la structure minimale.\n", ["src/", "public/", "composer.json"], "src/\npublic/\ncomposer.json", [("php-project-structure", 2), ("php-composer", 1)], 35),
         ["php-namespace-app-domain"] = N("Namespace App\\Domain", "Tu ranges Product dans le domaine applicatif.", "Creer une classe Product dans `namespace App\\Domain`.", "Fichier `src/Domain/Product.php` suppose.", "Classe Product namespacee.", "Declarer le namespace avant la classe.", "<?php\n\n// TODO: namespace et classe Product.\n", ["namespace App\\Domain", "class Product"], "<?php\n\nnamespace App\\Domain;\n\nclass Product\n{\n}", [("php-namespaces", 2), ("php-project-structure", 1)]),
         ["php-use-import"] = N("Import use", "Tu consommes Product depuis un autre namespace.", "Importer `App\\Domain\\Product` avec `use`.", "Classe Product existante.", "Instanciation avec `new Product`.", "Utiliser `use App\\Domain\\Product` puis `new Product`.", "<?php\n\nnamespace App\\Controller;\n\n// TODO: import et instanciation.\n", ["use App\\Domain\\Product", "new Product"], "<?php\n\nnamespace App\\Controller;\n\nuse App\\Domain\\Product;\n\n$product = new Product();", [("php-namespaces", 2), ("php-oop", 1)]),
         ["php-composer-json-minimal"] = N("composer.json PSR-4", "Tu initialises un petit projet PHP.", "Creer un `composer.json` minimal avec autoload PSR-4.", "Namespace `App\\` et dossier `src/`.", "JSON Composer valide.", "Contenir `autoload`, `psr-4`, `App\\\\` et `src/`.", "{\n  \"autoload\": {\n    // TODO\n  }\n}\n", ["\"autoload\"", "\"psr-4\"", "\"App\\\\\\\\\"", "\"src/\""], "{\n  \"autoload\": {\n    \"psr-4\": {\n      \"App\\\\\": \"src/\"\n    }\n  }\n}", [("php-composer", 2), ("php-autoload", 1)]),
+        ["php-composer-autoload-psr4"] = N("Autoload Composer PSR-4", "Tu relies le namespace App au dossier src.", "Configurer `autoload.psr-4` dans composer.json.", "Namespace App et dossier src.", "Autoload coherent.", "Utiliser `autoload`, `psr-4`, `App\\\\` et `src/`.", "{\n  // TODO: autoload\n}\n", ["\"autoload\"", "\"psr-4\"", "\"App\\\\\\\\\"", "\"src/\""], "{\n  \"autoload\": {\n    \"psr-4\": {\n      \"App\\\\\": \"src/\"\n    }\n  }\n}", [("php-autoload", 2), ("php-composer", 1)], 40),
         ["php-psr4-directory-mapping"] = N("Mapping PSR-4", "Tu verifies la correspondance namespace/fichier.", "Associer `App\\Service\\ProductService` a `src/Service/ProductService.php`.", "Namespace et chemin imposes.", "Correspondance explicite.", "Mentionner `App\\Service` et `src/Service`.", "// TODO: indique le mapping PSR-4 attendu.\n", ["App\\Service", "src/Service"], "// App\\Service\\ProductService => src/Service/ProductService.php", [("php-autoload", 2), ("php-project-structure", 1)]),
         ["php-psr12-class-style"] = N("Style PSR-12", "Tu remets une classe dans une structure lisible.", "Corriger une classe avec namespace, use, class et methodes.", "Classe ProductService.", "Structure PSR-12 simple.", "Inclure `namespace`, `use`, `final class`, accolades.", "<?php\n\n// TODO: structure PSR-12.\n", ["namespace", "use", "final class", "{", "}"], "<?php\n\nnamespace App\\Service;\n\nuse App\\Domain\\Product;\n\nfinal class ProductService\n{\n    public function format(Product $product): string\n    {\n        return $product->getName();\n    }\n}", [("php-standards", 2), ("php-namespaces", 1)]),
+        ["php-composer-require-package"] = N("composer require", "Tu ajoutes une dependance de test au projet.", "Declarer une dependance Composer dans `require-dev`.", "Package phpunit/phpunit.", "Bloc require-dev lisible.", "Utiliser `require-dev` et le nom du package.", "{\n  // TODO: dependance de test\n}\n", ["\"require-dev\"", "\"phpunit/phpunit\""], "{\n  \"require-dev\": {\n    \"phpunit/phpunit\": \"^10.0\"\n  }\n}", [("php-composer", 2), ("php-standards", 1)], 40),
         ["php-composer-scripts"] = N("Scripts Composer", "Tu ajoutes une commande de verification projet.", "Ajouter un script Composer `test`.", "composer.json existant.", "Bloc scripts avec test.", "Utiliser `\"scripts\"` et `\"test\"`.", "{\n  // TODO: scripts\n}\n", ["\"scripts\"", "\"test\""], "{\n  \"scripts\": {\n    \"test\": \"phpunit\"\n  }\n}", [("php-composer", 2), ("php-standards", 1)]),
+        ["php-autoload-require-vendor"] = N("Charger vendor/autoload.php", "Tu demarres le point d'entree public du catalogue.", "Inclure l'autoloader Composer avec `require`.", "Fichier `vendor/autoload.php` genere par Composer.", "Classes App chargeables.", "Utiliser `require` et `vendor/autoload.php`.", "<?php\n\n// TODO: charge l'autoloader.\n", ["require", "vendor/autoload.php"], "<?php\n\nrequire __DIR__ . '/../vendor/autoload.php';", [("php-autoload", 2), ("php-composer", 1)], 40),
 
+        ["php-http-request-response"] = N("Requete et reponse HTTP", "Tu observes le cycle minimal d'une page PHP.", "Lire une entree HTTP puis produire une reponse texte.", "URL `/products` simulee.", "Reponse Product Catalog.", "Utiliser `$_SERVER`, `REQUEST_URI` et `echo`.", "<?php\n\n// TODO: lis l'URI puis reponds.\n", ["$_SERVER", "REQUEST_URI", "echo"], "<?php\n\n$uri = $_SERVER[\"REQUEST_URI\"] ?? \"/products\";\necho \"Product Catalog: \" . $uri;", [("php-http", 2), ("php-strings", 1)], 35),
         ["php-get-query-param"] = N("Parametre GET", "Tu lis un filtre de recherche.", "Lire `$_GET[\"search\"]` avec valeur par defaut.", "Requete `/products?search=book` simulee.", "Une variable `$search`.", "Utiliser `$_GET`, `??` et `\"search\"`.", "<?php\n\n// TODO: lis search.\n", ["$_GET", "??", "\"search\""], "<?php\n\n$search = $_GET[\"search\"] ?? \"\";\necho $search;", [("php-http", 2), ("php-variables", 1)]),
         ["php-post-form-data"] = N("Donnees POST", "Tu lis un formulaire produit.", "Lire `$_POST[\"name\"]` et `$_POST[\"price\"]`.", "Formulaire simule.", "Variables name et price.", "Utiliser `$_POST`, `\"name\"`, `\"price\"`.", "<?php\n\n// TODO: lis name et price.\n", ["$_POST", "\"name\"", "\"price\""], "<?php\n\n$name = $_POST[\"name\"] ?? \"\";\n$price = $_POST[\"price\"] ?? 0;", [("php-http", 2), ("php-variables", 1)]),
         ["php-server-request-method"] = N("Methode HTTP", "Tu distingues creation et lecture.", "Tester `$_SERVER[\"REQUEST_METHOD\"] === \"POST\"`.", "Serveur HTTP simule.", "Branche POST detectee.", "Utiliser `$_SERVER`, `REQUEST_METHOD`, `POST`.", "<?php\n\n// TODO: teste la methode.\n", ["$_SERVER", "REQUEST_METHOD", "POST"], "<?php\n\nif ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {\n    echo \"Create product\";\n}", [("php-http", 2), ("php-conditions", 1)]),
+        ["php-server-request-uri"] = N("URI de requete", "Tu veux savoir quelle route a ete demandee.", "Lire `$_SERVER[\"REQUEST_URI\"]` avec une valeur par defaut.", "Serveur HTTP simule.", "Variable `$uri`.", "Utiliser `REQUEST_URI` et `??`.", "<?php\n\n// TODO: lis l'URI.\n", ["$_SERVER", "REQUEST_URI", "??", "$uri"], "<?php\n\n$uri = $_SERVER[\"REQUEST_URI\"] ?? \"/\";\necho $uri;", [("php-http", 2), ("php-variables", 1)], 35),
         ["php-session-cart"] = N("Panier en session", "Tu initialises un panier visiteur.", "Demarrer une session et initialiser `$_SESSION[\"cart\"]`.", "Session PHP.", "Panier tableau initialise.", "Utiliser `session_start`, `$_SESSION`, `\"cart\"`.", "<?php\n\n// TODO: session et panier.\n", ["session_start", "$_SESSION", "\"cart\""], "<?php\n\nsession_start();\n$_SESSION[\"cart\"] = $_SESSION[\"cart\"] ?? [];", [("php-sessions", 2), ("php-http", 1)]),
         ["php-cookie-theme"] = N("Cookie theme", "Tu memorises une preference d'interface.", "Creer un cookie `theme` avec valeur `dark`.", "Navigateur HTTP.", "Cookie envoye.", "Utiliser `setcookie`, `\"theme\"`, `\"dark\"`.", "<?php\n\n// TODO: cree le cookie.\n", ["setcookie", "\"theme\"", "\"dark\""], "<?php\n\nsetcookie(\"theme\", \"dark\");", [("php-cookies", 2), ("php-http", 1)]),
         ["php-file-upload-validation"] = N("Validation upload", "Tu verifies qu'un fichier produit a ete envoye.", "Lire un fichier uploadé et verifier qu'il existe.", "`$_FILES[\"image\"]`.", "Branche fichier present.", "Utiliser `$_FILES`, `isset`, `tmp_name`.", "<?php\n\n// TODO: verifie le fichier uploadé.\n", ["$_FILES", "isset", "tmp_name"], "<?php\n\nif (isset($_FILES[\"image\"]) && isset($_FILES[\"image\"][\"tmp_name\"])) {\n    echo $_FILES[\"image\"][\"tmp_name\"];\n}", [("php-http", 2), ("php-files", 1)]),
         ["php-json-response-native"] = N("Reponse JSON native", "Tu exposes un produit a un client HTTP.", "Retourner une reponse JSON avec un produit.", "`$product = [\"name\" => \"Book\"]`.", "JSON produit.", "Utiliser `header`, `Content-Type: application/json`, `json_encode`.", "<?php\n\n$product = [\"name\" => \"Book\", \"price\" => 12];\n\n// TODO: header JSON et encodage.\n", ["header", "Content-Type: application/json", "json_encode"], "<?php\n\n$product = [\"name\" => \"Book\", \"price\" => 12];\nheader(\"Content-Type: application/json\");\necho json_encode($product);", [("php-http", 1), ("php-json", 2)]),
+        ["php-http-status-code"] = N("Code HTTP", "Tu signales qu'un produit n'existe pas.", "Envoyer un code HTTP 404 avant une reponse JSON.", "Produit absent.", "Erreur JSON avec statut 404.", "Utiliser `http_response_code`, `404` et `json_encode`.", "<?php\n\n// TODO: retourne une erreur 404.\n", ["http_response_code", "404", "json_encode"], "<?php\n\nhttp_response_code(404);\necho json_encode([\"error\" => \"Product not found\"]);", [("php-http", 2), ("php-json", 1)], 40),
         ["php-basic-router"] = N("Mini-router natif", "Tu routes une API PHP minimale.", "Creer un mini-router basé sur `$_SERVER[\"REQUEST_URI\"]`.", "URI `/products`.", "Route products reconnue.", "Utiliser `REQUEST_URI`, `match` ou `switch`, `/products`.", "<?php\n\n$uri = $_SERVER[\"REQUEST_URI\"] ?? \"/\";\n\n// TODO: route /products.\n", ["REQUEST_URI", "match||switch", "/products"], "<?php\n\n$uri = $_SERVER[\"REQUEST_URI\"] ?? \"/\";\n$response = match ($uri) {\n    \"/products\" => [\"products\" => []],\n    default => [\"error\" => \"not_found\"],\n};\necho json_encode($response);", [("php-http", 2), ("php-conditions", 1)]),
+        ["php-route-products-get-post"] = N("Route GET/POST /products", "Tu separes lecture et creation de produits.", "Router `GET /products` et `POST /products`.", "Methodes HTTP et URI.", "Deux branches routees.", "Utiliser `REQUEST_METHOD`, `REQUEST_URI`, `/products`, `GET`, `POST`.", "<?php\n\n$method = $_SERVER[\"REQUEST_METHOD\"] ?? \"GET\";\n$uri = $_SERVER[\"REQUEST_URI\"] ?? \"/products\";\n\n// TODO: route GET et POST.\n", ["REQUEST_METHOD", "REQUEST_URI", "/products", "GET", "POST"], "<?php\n\n$method = $_SERVER[\"REQUEST_METHOD\"] ?? \"GET\";\n$uri = $_SERVER[\"REQUEST_URI\"] ?? \"/products\";\n\nif ($uri === \"/products\" && $method === \"GET\") {\n    echo json_encode([\"products\" => []]);\n} elseif ($uri === \"/products\" && $method === \"POST\") {\n    echo json_encode([\"created\" => true]);\n}", [("php-http", 2), ("php-json", 1)], 45),
 
         ["php-json-encode-products"] = N("Encoder produits JSON", "Tu prepares une reponse API.", "Transformer une liste de produits en JSON.", "`$products` tableau associatif.", "JSON des produits.", "Utiliser `json_encode` et `$products`.", "<?php\n\n$products = [[\"name\" => \"Book\"]];\n\n// TODO: encode en JSON.\n", ["json_encode", "$products"], "<?php\n\n$products = [[\"name\" => \"Book\"]];\necho json_encode($products);", [("php-json", 2), ("php-arrays", 1)]),
         ["php-json-decode-products"] = N("Decoder produits JSON", "Tu recuperes des produits depuis une chaine JSON.", "Decoder une chaine JSON en tableau associatif.", "`$json = '[{\"name\":\"Book\"}]'`.", "Tableau associatif PHP.", "Utiliser `json_decode` avec `true`.", "<?php\n\n$json = '[{\"name\":\"Book\"}]';\n\n// TODO: decode en tableau associatif.\n", ["json_decode", "true"], "<?php\n\n$json = '[{\"name\":\"Book\"}]';\n$products = json_decode($json, true);", [("php-json", 2), ("php-arrays", 1)]),
         ["php-file-put-contents"] = N("Ecrire products.json", "Tu persistes un catalogue simple.", "Sauvegarder du JSON dans `products.json`.", "`$products` tableau.", "Fichier JSON ecrit.", "Utiliser `file_put_contents`, `products.json`, `json_encode`.", "<?php\n\n$products = [[\"name\" => \"Book\"]];\n\n// TODO: sauvegarde le JSON.\n", ["file_put_contents", "products.json", "json_encode"], "<?php\n\n$products = [[\"name\" => \"Book\"]];\nfile_put_contents(\"products.json\", json_encode($products));", [("php-files", 2), ("php-json", 1)]),
         ["php-file-get-contents"] = N("Lire products.json", "Tu relis un catalogue stocke en fichier.", "Lire `products.json` puis decoder le JSON.", "Fichier products.json.", "Tableau `$products`.", "Utiliser `file_get_contents` et `json_decode`.", "<?php\n\n// TODO: lis et decode products.json.\n", ["file_get_contents", "json_decode"], "<?php\n\n$json = file_get_contents(\"products.json\");\n$products = json_decode($json, true);", [("php-files", 2), ("php-json", 1)]),
+        ["php-file-products-repository"] = N("Repository fichier JSON", "Tu encapsules la lecture fichier dans un repository.", "Creer une classe qui charge products.json.", "Fichier JSON de produits.", "Methode `findAll`.", "Utiliser `class`, `file_get_contents`, `json_decode` et `return`.", "<?php\n\nfinal class FileProductRepository\n{\n    // TODO: findAll\n}\n", ["class FileProductRepository", "file_get_contents", "json_decode", "return"], "<?php\n\nfinal class FileProductRepository\n{\n    public function findAll(): array\n    {\n        $json = file_get_contents(\"products.json\");\n        return json_decode($json, true);\n    }\n}", [("php-files", 1), ("php-json", 1), ("php-oop", 1)], 45),
         ["php-pdo-connection"] = N("Connexion PDO", "Tu prepares l'acces base de donnees.", "Creer une connexion PDO.", "`$dsn`, `$username`, `$password`.", "Objet PDO.", "Utiliser `new PDO`, `$dsn`, `$username`, `$password`.", "<?php\n\n$dsn = \"mysql:host=localhost;dbname=app\";\n$username = \"app\";\n$password = \"secret\";\n\n// TODO: cree PDO.\n", ["new PDO", "$dsn", "$username", "$password"], "<?php\n\n$dsn = \"mysql:host=localhost;dbname=app\";\n$username = \"app\";\n$password = \"secret\";\n$pdo = new PDO($dsn, $username, $password);", [("php-pdo", 2), ("php-project-structure", 1)]),
+        ["php-pdo-exception-mode"] = N("Mode exception PDO", "Tu veux que les erreurs SQL soient visibles et capturables.", "Configurer PDO avec `PDO::ERRMODE_EXCEPTION`.", "Objet `$pdo`.", "Exceptions SQL actives.", "Utiliser `setAttribute`, `PDO::ATTR_ERRMODE`, `PDO::ERRMODE_EXCEPTION`.", "<?php\n\n// TODO: configure le mode erreur.\n", ["setAttribute", "PDO::ATTR_ERRMODE", "PDO::ERRMODE_EXCEPTION"], "<?php\n\n$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);", [("php-pdo", 2), ("php-exceptions", 1)], 45),
         ["php-pdo-prepared-select"] = N("SELECT prepare PDO", "Tu lis un produit par identifiant sans concatener SQL.", "Preparer une requete SELECT avec parametre `:id`.", "`$id = 1`.", "Produit lu avec `fetch`.", "Utiliser `prepare`, `:id`, `execute`, `fetch`.", "<?php\n\n$id = 1;\n\n// TODO: prepare, execute, fetch.\n", ["prepare", ":id", "execute", "fetch"], "<?php\n\n$id = 1;\n$statement = $pdo->prepare(\"SELECT * FROM products WHERE id = :id\");\n$statement->execute([\"id\" => $id]);\n$product = $statement->fetch();", [("php-pdo", 2), ("php-http", 1)]),
         ["php-pdo-insert-product"] = N("INSERT prepare PDO", "Tu ajoutes un produit en base.", "Inserer un produit avec requete preparee.", "`name`, `price`.", "Produit insere.", "Utiliser `prepare`, `INSERT INTO products`, `:name`, `:price`, `execute`.", "<?php\n\n$name = \"Book\";\n$price = 12;\n\n// TODO: insert prepare.\n", ["prepare", "INSERT INTO products", ":name", ":price", "execute"], "<?php\n\n$name = \"Book\";\n$price = 12;\n$statement = $pdo->prepare(\"INSERT INTO products (name, price) VALUES (:name, :price)\");\n$statement->execute([\"name\" => $name, \"price\" => $price]);", [("php-pdo", 2), ("php-arrays", 1)]),
+        ["php-pdo-update-stock"] = N("UPDATE stock PDO", "Tu mets a jour le stock apres une commande.", "Preparer une requete UPDATE avec `:id` et `:stock`.", "id produit et nouveau stock.", "Stock mis a jour.", "Utiliser `prepare`, `UPDATE products`, `:stock`, `:id`, `execute`.", "<?php\n\n$id = 1;\n$stock = 2;\n\n// TODO: update prepare.\n", ["prepare", "UPDATE products", ":stock", ":id", "execute"], "<?php\n\n$id = 1;\n$stock = 2;\n$statement = $pdo->prepare(\"UPDATE products SET stock = :stock WHERE id = :id\");\n$statement->execute([\"stock\" => $stock, \"id\" => $id]);", [("php-pdo", 2), ("php-variables", 1)], 50),
+        ["php-pdo-delete-product"] = N("DELETE produit PDO", "Tu supprimes un produit par identifiant.", "Preparer une requete DELETE avec `:id`.", "`$id = 1`.", "Produit supprime.", "Utiliser `prepare`, `DELETE FROM products`, `:id`, `execute`.", "<?php\n\n$id = 1;\n\n// TODO: delete prepare.\n", ["prepare", "DELETE FROM products", ":id", "execute"], "<?php\n\n$id = 1;\n$statement = $pdo->prepare(\"DELETE FROM products WHERE id = :id\");\n$statement->execute([\"id\" => $id]);", [("php-pdo", 2), ("php-variables", 1)], 50),
+        ["php-pdo-repository"] = N("Repository PDO", "Tu regroupes les requetes SQL produit dans une classe.", "Creer `PdoProductRepository` avec une dependance PDO.", "Objet PDO injecte.", "Repository avec findById.", "Utiliser `__construct`, `PDO`, `prepare`, `fetch`.", "<?php\n\nfinal class PdoProductRepository\n{\n    // TODO\n}\n", ["class PdoProductRepository", "__construct", "PDO", "prepare", "fetch"], "<?php\n\nfinal class PdoProductRepository\n{\n    public function __construct(private PDO $pdo) {}\n\n    public function findById(int $id): array|false\n    {\n        $statement = $this->pdo->prepare(\"SELECT * FROM products WHERE id = :id\");\n        $statement->execute([\"id\" => $id]);\n        return $statement->fetch();\n    }\n}", [("php-pdo", 2), ("php-oop", 1)], 60),
         ["php-pdo-exceptions"] = N("PDO exceptions", "Tu rends les erreurs SQL visibles.", "Configurer PDO en mode exception.", "Objet `$pdo`.", "Mode erreur exception.", "Utiliser `PDO::ATTR_ERRMODE` et `PDO::ERRMODE_EXCEPTION`.", "<?php\n\n// TODO: configure PDO.\n", ["PDO::ATTR_ERRMODE", "PDO::ERRMODE_EXCEPTION"], "<?php\n\n$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);", [("php-pdo", 2), ("php-exceptions", 1)]),
 
         ["php-boss-final-native-product-catalog"] = N("Boss Final PHP : Product Catalog natif", "Tu construis un mini backend PHP natif de catalogue produits.", "Assembler domaine, repository, service, HTTP, JSON et persistance.", "Routes GET /products et POST /products, produits persistables en fichier ou PDO.", "Un backend structure retournant du JSON.", "Inclure strict types, namespace, Product, repository, service, routes HTTP, JSON, persistence et gestion d'exceptions.", "<?php\n\ndeclare(strict_types=1);\n\nnamespace App;\n\n// TODO: Product, repository, service, HTTP, persistence.\n", ["declare(strict_types=1);", "namespace", "class Product", "__construct", "private", "getName", "isAvailable", "throw new", "interface ProductRepositoryInterface", "findAvailable", "findById", "save", "ProductCatalogService", "__construct", "$_SERVER[\"REQUEST_METHOD\"]", "$_SERVER[\"REQUEST_URI\"]", "json_encode", "header", "prepare||file_put_contents", "try", "catch"], """
@@ -6261,9 +6615,9 @@ try {
             finalCorrection,
             skills,
             [
-                $"Orientation: {context}",
-                $"Structure attendue: {constraints}",
-                $"Guidage precis: commence par {string.Join(", ", requiredSnippets.Take(3))}, puis complete les TODO sans coder la sortie en dur."
+                $"Indice 1 - situation: {context}",
+                $"Indice 2 - strategie: pars des entrees imposees ({inputs}) puis applique la notion avant d'afficher ou retourner le resultat.",
+                $"Indice 3 - verification: controle les criteres {string.Join(", ", requiredSnippets.Take(3))}, puis assure-toi de ne pas coder `{expectedOutput}` en dur."
             ],
             xpReward);
 
@@ -7570,19 +7924,19 @@ try {
         ["symfony-project-protected-route"] = new("Route protegee simple", "Proteger une action de gestion produit.", "`#[IsGranted('ROLE_USER')]` restreint une action a un role.", "La protection simple convient aux actions create, edit ou delete du mini-projet.", "<?php\n\n#[IsGranted('ROLE_USER')]\npublic function new(): Response {}", "Ajoute `#[IsGranted('ROLE_USER')]` sur une action `new`, `edit` ou `delete`.", "<?php\n\n// Action protegee", "Une action sensible est protegee par attribut.", "Importe IsGranted puis place l'attribut au-dessus de l'action.", 70, ["use Symfony\\Component\\Security\\Http\\Attribute\\IsGranted", "#[IsGranted('ROLE_USER')]", "public function"], "La protection doit etre sur l'action, pas seulement mentionnee en commentaire.", "<?php\n\nuse Symfony\\Component\\Security\\Http\\Attribute\\IsGranted;\n\n#[IsGranted('ROLE_USER')]\npublic function new(Request $request): Response\n{\n    return new Response('Protected');\n}"),
 
         ["php-symfony-boss-final-products"] = new(
-            "Boss Final PHP / Symfony : Product Catalog",
-            "Construire une mini-application Symfony de gestion de produits.",
+            "Boss Final Symfony : Product Catalog complet",
+            "Construire une application Symfony Product Catalog complete.",
             "Le boss final assemble entite, repository, service, controller, formulaire, Doctrine, Twig et controle d'acces simple.",
             "Le Product Catalog final doit montrer des blocs coherents plutot que des snippets isoles.",
             "#[Route('/products')]\nfinal class ProductController extends AbstractController\n{\n}",
-            "Propose un assemblage coherent du Product Catalog: entite Product, repository, service, ProductController, ProductType, actions CRUD, Doctrine, Twig/render et route protegee.",
+            "Propose un assemblage coherent du Product Catalog: entite Product, repository, service, ProductController, ProductType, actions CRUD, Doctrine, Twig/render, API JsonResponse, status codes et route protegee.",
             "<?php\n\nnamespace App\\Controller;\n\n// Assemble ici les blocs attendus du Product Catalog.",
             "Le Product Catalog contient les blocs principaux attendus.",
             "Ajoute les blocs manquants: entite, repository, service, controller, formulaire, Doctrine, validation et acces.",
             220,
-            ["class Product", "ORM\\Entity", "private ?int $id", "private string $name", "private int $price", "private int $stock", "Assert\\NotBlank", "Assert\\PositiveOrZero", "ProductRepository", "findAvailable", "ProductService", "getAvailableProducts", "ProductController", "AbstractController", "product_index", "product_show", "product_new", "product_edit", "product_delete", "Response", "render", "redirectToRoute", "ProductType", "AbstractType", "FormBuilderInterface", "$builder->add('name')", "->add('price')", "->add('stock')", "configureOptions", "EntityManagerInterface", "persist($product)", "flush()", "remove($product)", "IsGranted"],
+            ["#[Route", "Controller", "render", "JsonResponse", "Product", "ProductRepository", "Entity", "Id", "Column", "ProductType", "handleRequest", "isSubmitted", "isValid", "Assert", "ProductCatalogService", "__construct", "denyAccessUnlessGranted||IsGranted", "find", "save", "remove||delete", "status"],
             "Ne colle pas seulement une liste de mots-cles: organise les blocs pour que leurs responsabilites restent lisibles.",
-            "<?php\n\nnamespace App\\Controller;\n\nuse App\\Entity\\Product;\nuse App\\Form\\ProductType;\nuse App\\Repository\\ProductRepository;\nuse App\\Service\\ProductService;\nuse Doctrine\\ORM\\EntityManagerInterface;\nuse Doctrine\\ORM\\Mapping as ORM;\nuse Symfony\\Bundle\\FrameworkBundle\\Controller\\AbstractController;\nuse Symfony\\Component\\Form\\AbstractType;\nuse Symfony\\Component\\Form\\FormBuilderInterface;\nuse Symfony\\Component\\HttpFoundation\\Request;\nuse Symfony\\Component\\HttpFoundation\\Response;\nuse Symfony\\Component\\Routing\\Attribute\\Route;\nuse Symfony\\Component\\Security\\Http\\Attribute\\IsGranted;\nuse Symfony\\Component\\Validator\\Constraints as Assert;\n\n#[ORM\\Entity(repositoryClass: ProductRepository::class)]\nclass Product\n{\n    #[ORM\\Id]\n    #[ORM\\GeneratedValue]\n    #[ORM\\Column]\n    private ?int $id = null;\n\n    #[ORM\\Column]\n    #[Assert\\NotBlank]\n    private string $name = '';\n\n    #[ORM\\Column]\n    #[Assert\\PositiveOrZero]\n    private int $price = 0;\n\n    #[ORM\\Column]\n    #[Assert\\PositiveOrZero]\n    private int $stock = 0;\n}\n\nfinal class ProductRepository\n{\n    public function findAvailable(): array { return []; }\n}\n\nfinal readonly class ProductService\n{\n    public function __construct(private ProductRepository $products) {}\n    public function getAvailableProducts(): array { return $this->products->findAvailable(); }\n}\n\nfinal class ProductType extends AbstractType\n{\n    public function buildForm(FormBuilderInterface $builder, array $options): void\n    {\n        $builder->add('name')->add('price')->add('stock');\n    }\n\n    public function configureOptions($resolver): void\n    {\n        $resolver->setDefaults(['data_class' => Product::class]);\n    }\n}\n\n#[Route('/products')]\nfinal class ProductController extends AbstractController\n{\n    public function __construct(private ProductService $products) {}\n\n    #[Route('', name: 'product_index')]\n    public function index(): Response { return $this->render('product/index.html.twig'); }\n\n    #[Route('/{id}', name: 'product_show')]\n    public function show(Product $product): Response { return $this->render('product/show.html.twig'); }\n\n    #[Route('/new', name: 'product_new')]\n    #[IsGranted('ROLE_USER')]\n    public function new(Request $request, EntityManagerInterface $entityManager): Response\n    {\n        $product = new Product();\n        $form = $this->createForm(ProductType::class, $product);\n        $form->handleRequest($request);\n        if ($form->isSubmitted() && $form->isValid()) {\n            $entityManager->persist($product);\n            $entityManager->flush();\n            return $this->redirectToRoute('product_index');\n        }\n        return $this->render('product/new.html.twig', ['form' => $form]);\n    }\n\n    #[Route('/{id}/edit', name: 'product_edit')]\n    public function edit(Product $product): Response { return $this->redirectToRoute('product_index'); }\n\n    #[Route('/{id}/delete', name: 'product_delete')]\n    public function delete(Product $product, EntityManagerInterface $entityManager): Response\n    {\n        $entityManager->remove($product);\n        $entityManager->flush();\n        return $this->redirectToRoute('product_index');\n    }\n}")
+            "<?php\n\nnamespace App\\Controller;\n\nuse App\\Entity\\Product;\nuse App\\Form\\ProductType;\nuse App\\Repository\\ProductRepository;\nuse App\\Service\\ProductCatalogService;\nuse Doctrine\\ORM\\EntityManagerInterface;\nuse Doctrine\\ORM\\Mapping as ORM;\nuse Symfony\\Bundle\\FrameworkBundle\\Controller\\AbstractController;\nuse Symfony\\Component\\Form\\AbstractType;\nuse Symfony\\Component\\Form\\FormBuilderInterface;\nuse Symfony\\Component\\HttpFoundation\\JsonResponse;\nuse Symfony\\Component\\HttpFoundation\\Request;\nuse Symfony\\Component\\HttpFoundation\\Response;\nuse Symfony\\Component\\Routing\\Attribute\\Route;\nuse Symfony\\Component\\Security\\Http\\Attribute\\IsGranted;\nuse Symfony\\Component\\Validator\\Constraints as Assert;\n\n#[ORM\\Entity(repositoryClass: ProductRepository::class)]\nclass Product\n{\n    #[ORM\\Id]\n    #[ORM\\GeneratedValue]\n    #[ORM\\Column]\n    private ?int $id = null;\n\n    #[ORM\\Column]\n    #[Assert\\NotBlank]\n    private string $name = '';\n\n    #[ORM\\Column]\n    #[Assert\\PositiveOrZero]\n    private int $price = 0;\n\n    #[ORM\\Column]\n    #[Assert\\PositiveOrZero]\n    private int $stock = 0;\n}\n\nfinal class ProductRepository\n{\n    public function find(int $id): ?Product { return null; }\n    public function findAvailable(): array { return []; }\n    public function save(Product $product): void {}\n    public function remove(Product $product): void {}\n}\n\nfinal readonly class ProductCatalogService\n{\n    public function __construct(private ProductRepository $products) {}\n    public function getAvailableProducts(): array { return $this->products->findAvailable(); }\n}\n\nfinal class ProductType extends AbstractType\n{\n    public function buildForm(FormBuilderInterface $builder, array $options): void\n    {\n        $builder->add('name')->add('price')->add('stock');\n    }\n\n    public function configureOptions($resolver): void\n    {\n        $resolver->setDefaults(['data_class' => Product::class]);\n    }\n}\n\n#[Route('/products')]\nfinal class ProductController extends AbstractController\n{\n    public function __construct(private ProductCatalogService $products) {}\n\n    #[Route('', name: 'product_index')]\n    public function index(): Response { return $this->render('product/index.html.twig'); }\n\n    #[Route('/{id}', name: 'product_show')]\n    public function show(Product $product): Response { return $this->render('product/show.html.twig'); }\n\n    #[Route('/new', name: 'product_new')]\n    #[IsGranted('ROLE_USER')]\n    public function new(Request $request, EntityManagerInterface $entityManager): Response\n    {\n        $product = new Product();\n        $form = $this->createForm(ProductType::class, $product);\n        $form->handleRequest($request);\n        if ($form->isSubmitted() && $form->isValid()) {\n            $entityManager->persist($product);\n            $entityManager->flush();\n            return $this->redirectToRoute('product_index');\n        }\n        return $this->render('product/new.html.twig', ['form' => $form]);\n    }\n\n    #[Route('/api', name: 'product_api')]\n    public function api(): JsonResponse { return new JsonResponse(['status' => 'ok'], 200); }\n\n    #[Route('/{id}/edit', name: 'product_edit')]\n    public function edit(Product $product): Response { return $this->redirectToRoute('product_index'); }\n\n    #[Route('/{id}/delete', name: 'product_delete')]\n    public function delete(Product $product, EntityManagerInterface $entityManager): Response\n    {\n        $entityManager->remove($product);\n        $entityManager->flush();\n        return $this->redirectToRoute('product_index');\n    }\n}")
     };
 
     private static Course PhpSymfonyCourse() =>
@@ -7595,39 +7949,45 @@ try {
             SortOrder = 3,
             Chapters =
             [
-                PhpSymfonyChapter(1, "PHP 1 - Fondations du langage", "Syntaxe, variables, types, conditions et boucles sur des mini-cas metier.",
-                    ["php-syntax-script", "php-variables-product", "php-types-order", "php-condition-stock", "php-condition-discount", "php-match-order-status", "php-loop-invoice-lines", "php-while-stock-decrease"]),
-                PhpSymfonyChapter(2, "PHP 2 - Donnees, tableaux et transformations", "Tableaux indexes, associatifs, listes de produits et transformations.",
-                    ["php-array-product-names", "php-associative-product", "php-products-list", "php-filter-products-in-stock", "php-compute-cart-total", "php-array-map-product-labels", "php-array-filter-available", "php-array-reduce-total"]),
-                PhpSymfonyChapter(3, "PHP 3 - Fonctions et code reutilisable", "Fonctions metier claires, typees et reutilisables.",
-                    ["php-function-format-product", "php-function-is-available", "php-function-calculate-total", "php-function-default-parameters", "php-function-named-arguments", "php-closure-discount", "php-arrow-function-tax"]),
-                PhpSymfonyChapter(4, "PHP 4 - PHP moderne 8.x", "Types modernes, readonly, enums, match, dates et fonctions de chaines.",
-                    ["php-strict-types", "php-nullable-types", "php-union-types", "php-readonly-product", "php-enum-order-status", "php-match-with-enum", "php-date-time-immutable", "php-string-functions-clean-input"]),
-                PhpSymfonyChapter(5, "PHP 5 - POO PHP professionnelle", "Modele objet Product Catalog avec encapsulation, interfaces, exceptions et composition.",
-                    ["php-oop-product-class", "php-oop-constructor-promotion", "php-oop-getters", "php-oop-business-method", "php-oop-guard-negative-price", "php-oop-custom-exception", "php-oop-interface", "php-oop-implementation", "php-oop-service-composition", "php-oop-abstract-class", "php-oop-trait", "php-oop-try-catch"]),
-                PhpSymfonyChapter(6, "PHP 6 - Composer, namespaces, autoload et standards", "Organisation professionnelle avec namespaces, PSR-4, composer.json et PSR-12.",
-                    ["php-namespace-app-domain", "php-use-import", "php-composer-json-minimal", "php-psr4-directory-mapping", "php-psr12-class-style", "php-composer-scripts"]),
-                PhpSymfonyChapter(7, "PHP 7 - PHP web natif", "HTTP cote PHP: GET, POST, SERVER, sessions, cookies, upload, JSON et mini-router.",
-                    ["php-get-query-param", "php-post-form-data", "php-server-request-method", "php-session-cart", "php-cookie-theme", "php-file-upload-validation", "php-json-response-native", "php-basic-router"]),
-                PhpSymfonyChapter(8, "PHP 8 - Donnees, fichiers, JSON et PDO", "Persistance simple avec JSON, fichiers, PDO et requetes preparees.",
-                    ["php-json-encode-products", "php-json-decode-products", "php-file-put-contents", "php-file-get-contents", "php-pdo-connection", "php-pdo-prepared-select", "php-pdo-insert-product", "php-pdo-exceptions"]),
+                PhpSymfonyChapter(1, "PHP 1 - B-A-BA : premiers scripts PHP", "Depuis zero: script, sortie, commentaires, variables, types, conditions et boucles.",
+                    ["php-what-is-php", "php-syntax-script", "php-echo-output", "php-comments", "php-variables-product", "php-strings-output", "php-numbers-price", "php-booleans-stock", "php-types-order", "php-condition-stock", "php-condition-discount", "php-match-order-status", "php-loop-invoice-lines", "php-while-stock-decrease"]),
+                PhpSymfonyChapter(2, "PHP 2 - Tableaux, listes et donnees metier", "Variables groupees, tableaux indexes, associatifs, listes, filtrage, transformation et reduction.",
+                    ["php-array-product-names", "php-array-access-index", "php-array-count-products", "php-associative-product", "php-products-list", "php-foreach-products", "php-filter-products-in-stock", "php-compute-cart-total", "php-array-map-product-labels", "php-array-filter-available", "php-array-reduce-total", "php-sort-products-by-price"]),
+                PhpSymfonyChapter(3, "PHP 3 - Fonctions metier", "Extraire la logique dans des fonctions typees, reutilisables et testables.",
+                    ["php-function-why", "php-function-format-product", "php-function-parameters", "php-function-return", "php-function-is-available", "php-function-calculate-total", "php-function-default-parameters", "php-function-named-arguments", "php-closure-discount", "php-arrow-function-tax", "php-function-refactor-duplicated-code"]),
+                PhpSymfonyChapter(4, "PHP 4 - PHP moderne 8.x", "Strict types, types scalaires, retours, nullable, union, match, enum, readonly, date et syntaxe moderne.",
+                    ["php-strict-types", "php-scalar-type-hints", "php-return-types", "php-nullable-types", "php-union-types", "php-match-expression", "php-enum-order-status", "php-match-with-enum", "php-readonly-product", "php-date-time-immutable", "php-string-functions-clean-input", "php-null-coalescing", "php-spread-operator"]),
+                PhpSymfonyChapter(5, "PHP 5 - POO PHP professionnelle", "Passer des tableaux au domaine objet: Product, encapsulation, exceptions, interfaces, service et composition.",
+                    ["php-oop-why-objects", "php-oop-product-class", "php-oop-properties", "php-oop-constructor", "php-oop-constructor-promotion", "php-oop-getters", "php-oop-business-method", "php-oop-encapsulation", "php-oop-guard-negative-price", "php-oop-custom-exception", "php-oop-interface", "php-oop-implementation", "php-oop-service-composition", "php-oop-abstract-class", "php-oop-trait", "php-oop-try-catch", "php-oop-composition-over-inheritance"]),
+                PhpSymfonyChapter(6, "PHP 6 - Organisation professionnelle", "Structure src/public, namespaces, use, Composer, autoload PSR-4 et standards PSR-12.",
+                    ["php-project-structure-src-public", "php-namespace-app-domain", "php-use-import", "php-composer-json-minimal", "php-composer-autoload-psr4", "php-psr4-directory-mapping", "php-psr12-class-style", "php-composer-require-package", "php-composer-scripts", "php-autoload-require-vendor"]),
+                PhpSymfonyChapter(7, "PHP 7 - PHP web natif : comprendre HTTP", "Requete, reponse, GET, POST, SERVER, session, cookie, fichier, JSON, status code et mini-router.",
+                    ["php-http-request-response", "php-get-query-param", "php-post-form-data", "php-server-request-method", "php-server-request-uri", "php-session-cart", "php-cookie-theme", "php-file-upload-validation", "php-json-response-native", "php-http-status-code", "php-basic-router", "php-route-products-get-post"]),
+                PhpSymfonyChapter(8, "PHP 8 - Persistance : JSON, fichiers et PDO", "Garder les donnees entre deux requetes avec JSON, fichiers, PDO, requetes preparees et repositories.",
+                    ["php-json-encode-products", "php-json-decode-products", "php-file-put-contents", "php-file-get-contents", "php-file-products-repository", "php-pdo-connection", "php-pdo-exception-mode", "php-pdo-prepared-select", "php-pdo-insert-product", "php-pdo-update-stock", "php-pdo-delete-product", "php-pdo-repository"]),
                 Chapter("Boss Final PHP - Product Catalog natif", "Mini backend PHP natif de catalogue produits.", 9, 0,
                 [
                     PhpSymfonyLesson("php-boss-final-native-product-catalog", 1, isBossFinal: true)
                 ]),
-                PhpSymfonyChapter(10, "Symfony HTTP", "Structure de projet, controllers, routes et responses.",
-                    ["symfony-project-structure", "symfony-controller", "symfony-route-index", "symfony-response", "symfony-json-response", "symfony-route-parameter"]),
-                PhpSymfonyChapter(11, "Twig et affichage", "Rendu de templates, variables, boucles, conditions et liens Twig.",
-                    ["symfony-render-template", "symfony-twig-variable", "symfony-twig-loop", "symfony-twig-condition", "symfony-twig-path"]),
-                PhpSymfonyChapter(12, "Formulaires et validation", "ProductType, champs, createForm, handleRequest, contraintes et erreurs.",
-                    ["symfony-form-type", "symfony-form-fields", "symfony-create-form", "symfony-handle-request", "symfony-validation-constraints", "symfony-form-errors"]),
-                PhpSymfonyChapter(13, "Doctrine ORM", "Entite Product persistante, repository, requetes, sauvegarde et suppression.",
-                    ["symfony-doctrine-entity", "symfony-doctrine-id", "symfony-doctrine-columns", "symfony-doctrine-repository", "symfony-doctrine-query", "symfony-doctrine-save", "symfony-doctrine-delete"]),
-                PhpSymfonyChapter(14, "Services et architecture Symfony", "Services applicatifs, injection et delegation depuis les controllers.",
-                    ["symfony-service-class", "symfony-service-repository-injection", "symfony-service-method", "symfony-controller-service-injection", "symfony-controller-delegation"]),
-                PhpSymfonyChapter(15, "Mini-projet Symfony vertical", "Fonctionnalites completes du Product Catalog.",
-                    ["symfony-project-product-list", "symfony-project-product-show", "symfony-project-product-create", "symfony-project-product-edit", "symfony-project-product-delete", "symfony-project-product-validation", "symfony-project-protected-route"]),
-                Chapter("Boss Final PHP / Symfony", "Mini-application Symfony de gestion de produits.", 16, 0,
+                PhpSymfonyChapter(10, "Symfony 1 - Comprendre Symfony", "Pourquoi le framework existe, structure projet, front controller, cycle HTTP, console et .env.",
+                    ["symfony-why-framework", "symfony-project-structure", "symfony-public-index", "symfony-request-response-flow", "symfony-bin-console", "symfony-env-file"]),
+                PhpSymfonyChapter(11, "Symfony 2 - Routing et Controllers", "Le mini-router PHP devient routes, controllers, Request, Response, JsonResponse et erreurs.",
+                    ["symfony-controller-basic", "symfony-route-index", "symfony-response", "symfony-json-response", "symfony-route-parameter", "symfony-request-query", "symfony-request-post", "symfony-redirect", "symfony-not-found"]),
+                PhpSymfonyChapter(12, "Symfony 3 - Twig et vues", "Construire les vues du Product Catalog avec render, variables, boucles, conditions, liens, includes et layout.",
+                    ["symfony-render-template", "symfony-twig-variable", "symfony-twig-loop", "symfony-twig-condition", "symfony-twig-path", "symfony-twig-include", "symfony-twig-layout", "symfony-twig-product-card"]),
+                PhpSymfonyChapter(13, "Symfony 4 - Doctrine ORM", "Le repository PHP devient Doctrine: entite, id, colonnes, repository, find, requetes, save, delete et relations.",
+                    ["symfony-doctrine-why-orm", "symfony-doctrine-entity", "symfony-doctrine-id", "symfony-doctrine-columns", "symfony-doctrine-repository", "symfony-doctrine-find", "symfony-doctrine-query", "symfony-doctrine-save", "symfony-doctrine-delete", "symfony-doctrine-relations"]),
+                PhpSymfonyChapter(14, "Symfony 5 - Forms et Validation", "Le POST natif devient ProductType, createForm, handleRequest, contraintes et erreurs utilisateur.",
+                    ["symfony-form-why", "symfony-form-type", "symfony-form-fields", "symfony-create-form", "symfony-handle-request", "symfony-validation-constraints", "symfony-form-errors", "symfony-form-product-create", "symfony-form-product-edit"]),
+                PhpSymfonyChapter(15, "Symfony 6 - Services et architecture", "Le service PHP natif devient service Symfony injecte et teste hors controller.",
+                    ["symfony-service-why", "symfony-service-class", "symfony-dependency-injection", "symfony-service-repository-injection", "symfony-controller-service-injection", "symfony-controller-delegation", "symfony-dto", "symfony-command"]),
+                PhpSymfonyChapter(16, "Symfony 7 - Securite simple", "Utilisateur, hash de mot de passe, roles, checks d'acces, routes protegees et CSRF.",
+                    ["symfony-security-why", "symfony-user-entity", "symfony-password-hashing", "symfony-roles", "symfony-is-granted", "symfony-deny-access-unless-granted", "symfony-protected-route", "symfony-csrf-basic"]),
+                PhpSymfonyChapter(17, "Symfony 8 - API Symfony", "JsonResponse, endpoints liste/detail/creation, erreurs de validation, status codes et service layer.",
+                    ["symfony-api-json-response", "symfony-api-list-products", "symfony-api-show-product", "symfony-api-create-product", "symfony-api-validation-errors", "symfony-api-status-codes", "symfony-api-service-layer"]),
+                PhpSymfonyChapter(18, "Symfony 9 - Projet Product Catalog Symfony", "Fonctionnalites verticales: liste, detail, creation, edition, suppression, validation, service, route protegee, API et architecture.",
+                    ["symfony-project-product-list", "symfony-project-product-show", "symfony-project-product-create", "symfony-project-product-edit", "symfony-project-product-delete", "symfony-project-product-validation", "symfony-project-product-service", "symfony-project-protected-route", "symfony-project-api-endpoint", "symfony-project-clean-architecture"]),
+                Chapter("Boss Final Symfony", "Application Symfony Product Catalog complete.", 19, 0,
                 [
                     PhpSymfonyLesson("php-symfony-boss-final-products", 1, isBossFinal: true)
                 ])
@@ -7675,6 +8035,7 @@ try {
         "php-condition-discount" => ["echo \"Total final : 108\"", "echo 'Total final : 108'"],
         "php-compute-cart-total" or "php-array-reduce-total" or "php-function-calculate-total" => ["echo 39", "return 39"],
         "php-filter-products-in-stock" => ["unset($products", "$products = []"],
+        "php-function-format-product" => ["echo \"Book - 12 euros\"", "echo 'Book - 12 euros'"],
         "php-pdo-prepared-select" or "php-pdo-insert-product" => ["query(\"SELECT", "query('SELECT", "query(\"INSERT", "query('INSERT"],
         _ => []
     };
@@ -8238,6 +8599,12 @@ try {
         5 => PhpSymfonyBoss("php-module-5-intermediate-boss", "Domaine objet Product Catalog", "Creer Product, ProductRepositoryInterface, InMemoryProductRepository, ProductCatalogService et exception metier.", "Assemble un domaine objet complet avec repository, service, composition et exception.", "<?php\n\n// Domaine objet Product Catalog", "Le domaine objet separe modele, contrat, implementation et service.", 115, ["final class Product", "private string $name", "private float $price", "private int $stock", "InvalidProductPriceException", "interface ProductRepositoryInterface", "implements ProductRepositoryInterface", "array_filter", "ProductCatalogService", "__construct", "$this->"], ["Commence par Product et l'exception.", "Ajoute l'interface puis l'implementation en memoire.", "Injecte le repository dans ProductCatalogService."], "<?php\n\nclass InvalidProductPriceException extends InvalidArgumentException {}\nfinal class Product { public function __construct(private string $name, private float $price, private int $stock) { if ($price < 0) { throw new InvalidProductPriceException(); } } public function isAvailable(): bool { return $this->stock > 0; } }\ninterface ProductRepositoryInterface { public function findAvailable(): array; }\nfinal class InMemoryProductRepository implements ProductRepositoryInterface { public function __construct(private array $products) {} public function findAvailable(): array { return array_filter($this->products, fn(Product $product) => $product->isAvailable()); } }\nfinal class ProductCatalogService { public function __construct(private ProductRepositoryInterface $products) {} public function listAvailableProducts(): array { return $this->products->findAvailable(); } }"),
         7 => PhpSymfonyBoss("php-module-7-intermediate-boss", "Mini endpoint PHP natif", "Creer un mini-router PHP qui retourne une liste de produits en JSON.", "Lis REQUEST_METHOD et REQUEST_URI, route GET /products et retourne une reponse JSON.", "<?php\n\n// Endpoint PHP natif", "L'endpoint lit HTTP et retourne JSON.", 100, ["$_SERVER", "REQUEST_METHOD", "REQUEST_URI", "/products", "match||switch", "header", "Content-Type: application/json", "json_encode"], ["Lis la methode et l'URI.", "Route /products avec match ou switch.", "Ajoute le header JSON puis json_encode."], "<?php\n\n$method = $_SERVER[\"REQUEST_METHOD\"] ?? \"GET\";\n$uri = $_SERVER[\"REQUEST_URI\"] ?? \"/products\";\n$response = match ([$method, $uri]) { [\"GET\", \"/products\"] => [\"products\" => []], default => [\"error\" => \"not_found\"] };\nheader(\"Content-Type: application/json\");\necho json_encode($response);"),
         8 => PhpSymfonyBoss("php-module-8-intermediate-boss", "Mini repository PDO", "Creer une connexion PDO, preparer un SELECT et inserer un produit avec requetes preparees.", "Configure PDO, execute un SELECT par id et un INSERT produit avec parametres.", "<?php\n\n// Repository PDO", "Le repository utilise PDO et des requetes preparees.", 110, ["new PDO", "PDO::ATTR_ERRMODE", "PDO::ERRMODE_EXCEPTION", "prepare", "SELECT", ":id", "INSERT INTO products", ":name", ":price", "execute", "fetch"], ["Cree la connexion PDO.", "Configure le mode exception.", "Utilise prepare/execute pour SELECT et INSERT."], "<?php\n\n$pdo = new PDO($dsn, $username, $password);\n$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);\n$select = $pdo->prepare(\"SELECT * FROM products WHERE id = :id\");\n$select->execute([\"id\" => 1]);\n$product = $select->fetch();\n$insert = $pdo->prepare(\"INSERT INTO products (name, price) VALUES (:name, :price)\");\n$insert->execute([\"name\" => \"Book\", \"price\" => 12]);"),
+        11 => PhpSymfonyBoss("symfony-module-2-intermediate-boss", "Routing et Controller Product", "Assembler route, controller, Response et JsonResponse pour Product.", "Cree un ProductController avec route /products, route detail et reponse JSON.", "<?php\n\n// ProductController routes", "Le controller expose des routes produit coherentes.", 100, ["#[Route", "ProductController", "AbstractController", "Response", "JsonResponse", "/products", "{id}"], ["Cree ProductController.", "Ajoute routes index et show.", "Retourne Response ou JsonResponse."], "<?php\n\n#[Route('/products')]\nfinal class ProductController extends AbstractController { #[Route('', name: 'product_index')] public function index(): Response { return new Response('Products'); } #[Route('/{id}', name: 'product_show')] public function show(int $id): JsonResponse { return new JsonResponse(['id' => $id]); } }"),
+        12 => PhpSymfonyBoss("symfony-module-3-intermediate-boss", "Vue Twig Product Catalog", "Construire une vue Twig qui liste les produits.", "Utilise render, une variable products, une boucle Twig, un include et un lien path.", "{% for product in products %}", "La vue Twig affiche le catalogue avec composants reutilisables.", 95, ["render", "products", "{% for product in products %}", "{{ product.name }}", "path(", "include"], ["Passe products au template.", "Boucle dans Twig.", "Extrais la carte avec include."], "<?php\n\nreturn $this->render('product/index.html.twig', ['products' => $products]);\n\n{% for product in products %}\n    {{ include('product/_card.html.twig', { product: product }) }}\n    <a href=\"{{ path('product_show', { id: product.id }) }}\">Voir</a>\n{% endfor %}"),
+        13 => PhpSymfonyBoss("symfony-module-4-intermediate-boss", "Entity et Repository Product", "Declarer Product Doctrine et ProductRepository.", "Assemble Entity, Id, Column, repository et une requete findAvailable.", "<?php\n\n// Product entity", "Doctrine sait mapper et charger les produits.", 110, ["Entity", "Id", "Column", "ProductRepository", "ServiceEntityRepository", "findAvailable", "createQueryBuilder"], ["Declare l'entite.", "Ajoute le repository.", "Ajoute findAvailable."], "<?php\n\n#[ORM\\Entity(repositoryClass: ProductRepository::class)] class Product { #[ORM\\Id] #[ORM\\Column] private ?int $id = null; #[ORM\\Column] private string $name = ''; }\nfinal class ProductRepository extends ServiceEntityRepository { public function findAvailable(): array { return $this->createQueryBuilder('p')->andWhere('p.stock > 0')->getQuery()->getResult(); } }"),
+        14 => PhpSymfonyBoss("symfony-module-5-intermediate-boss", "Formulaire Product valide", "Assembler ProductType, handleRequest et contraintes de validation.", "Cree un formulaire ProductType, traite la requete, valide puis persiste.", "<?php\n\n// Product form", "Le formulaire hydrate Product et affiche les erreurs.", 105, ["ProductType", "buildForm", "handleRequest", "isSubmitted", "isValid", "Assert", "persist", "flush"], ["Cree ProductType.", "Traite Request.", "Persiste seulement si valide."], "<?php\n\nfinal class ProductType extends AbstractType { public function buildForm(FormBuilderInterface $builder, array $options): void { $builder->add('name')->add('price'); } }\n#[Assert\\NotBlank] private string $name = '';\n$form = $this->createForm(ProductType::class, $product); $form->handleRequest($request); if ($form->isSubmitted() && $form->isValid()) { $entityManager->persist($product); $entityManager->flush(); }"),
+        15 => PhpSymfonyBoss("symfony-module-6-intermediate-boss", "Service ProductCatalogService", "Deplacer la logique produit dans un service Symfony.", "Injecte ProductRepository dans ProductCatalogService puis injecte le service dans le controller.", "<?php\n\n// Service ProductCatalog", "Le controller delegue la logique au service.", 105, ["ProductCatalogService", "__construct", "ProductRepository", "getAvailableProducts", "ProductController", "private ProductCatalogService"], ["Cree le service.", "Injecte le repository.", "Injecte le service dans le controller."], "<?php\n\nfinal readonly class ProductCatalogService { public function __construct(private ProductRepository $products) {} public function getAvailableProducts(): array { return $this->products->findAvailable(); } }\nfinal class ProductController { public function __construct(private ProductCatalogService $catalog) {} }"),
+        17 => PhpSymfonyBoss("symfony-module-8-intermediate-boss", "API Product Catalog", "Construire une API JSON Symfony pour Product.", "Expose liste, detail, creation, validation et status codes via JsonResponse.", "<?php\n\n// API Product", "L'API utilise service, validation et codes HTTP explicites.", 115, ["JsonResponse", "#[Route('/api/products", "ProductCatalogService", "Request", "status", "201", "400"], ["Commence par JsonResponse.", "Delegue au service.", "Ajoute les status codes."], "<?php\n\n#[Route('/api/products', methods: ['POST'])]\npublic function create(Request $request, ProductCatalogService $catalog): JsonResponse { $product = $catalog->createProduct('Book', 12); return new JsonResponse(['status' => 'created'], 201); }"),
         _ => null
     };
 
@@ -8257,7 +8624,22 @@ try {
             Slug = slug,
             Title = title,
             Objective = objective,
-            Instructions = instructions,
+            Instructions = $"""
+            Mise en situation:
+            {instructions}
+
+            Competences testees:
+            {string.Join(", ", requiredSnippets.Take(6))}
+
+            Travail attendu:
+            Complete le starter par etapes. Commence par la structure, puis ajoute la logique metier, puis verifie la sortie ou les valeurs retournees.
+
+            Criteres visibles:
+            {string.Join("\n", requiredSnippets.Select(snippet => $"- {snippet}"))}
+
+            Rapport final:
+            Apres soumission, le resultat detaille les forces, les faiblesses et les revisions suggerees par competence.
+            """,
             StarterCode = starterCode,
             ExpectedResult = expectedResult,
             XpReward = xpReward,

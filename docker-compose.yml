@@ -20,10 +20,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api-proxy
+        API_INTERNAL_BASE_URL: http://api:5000
     image: interactive-learning-frontend:dev
     container_name: interactive-learning-frontend
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api
+      NEXT_PUBLIC_API_BASE_URL: /api-proxy
+      API_INTERNAL_BASE_URL: http://api:5000
       NEXT_TELEMETRY_DISABLED: "1"
     ports:
       - "3000:3000"
